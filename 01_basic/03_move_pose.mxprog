@@ -27,11 +27,11 @@
 
      TRF — Tool Reference Frame. The tool tip. By default it sits
            on the robot's flange; you move it to the real tip of
-           the real gripper with SetTrf. See intermediate/02.
+           the real gripper with SetTrf. See 02_intermediate/02.
      WRF — World Reference Frame. The origin everything is
            measured from. By default it is the robot's base; you
            move it to a fixture or a table with SetWrf. See
-           intermediate/01.
+           02_intermediate/01.
 
    Those two frames are what turn a robot into an application,
    and they are the reason this command is worth the extra
@@ -73,7 +73,7 @@
    A single pose can usually be reached by eight different arm
    postures — elbow up or down, wrist flipped or not. The robot
    picks one automatically. When you need to force the choice,
-   that is SetConf, in intermediate/04.
+   that is SetConf, in 02_intermediate/04.
    --------------------------------------------------------------- */
 
 
@@ -91,7 +91,7 @@
 
    It does NOT reset persistent settings — joint limits, work
    zone, tool sphere, collision and calibration config all
-   survive. Run common/cold_start.mxprog for those.
+   survive. Run 00_common/00_cold_start.mxprog for those.
 
    This block is identical in every example. To remove it
    everywhere, see the README. */

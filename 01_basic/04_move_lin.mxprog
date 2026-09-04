@@ -50,7 +50,7 @@
    3. IT HOLDS THE ARM POSTURE. The start and end postures have
       to share the same configuration {cs, ce, cw} — the robot
       will not flip its elbow or wrist in the middle of a
-      straight line. See intermediate/04.
+      straight line. See 02_intermediate/04.
 
    THE RULE
 
@@ -133,7 +133,7 @@ MovePose(190, 0, 300, 0, 90, 0)
 // 2. Descend straight down onto it. Path critical, so MoveLin.
 MoveLin(190, 0, 260, 0, 90, 0)
 
-// 3. (A gripper would close here. See intermediate/07.)
+// 3. (A gripper would close here. See 02_intermediate/07.)
 Delay(0.5)
 
 // 4. Lift straight back up before going anywhere. Skipping this
@@ -149,12 +149,12 @@ MoveJoints(0, 0, 0, 0, 0, 0)
    THINGS TO TRY
 
    1. Run 03 and 04 back to back. Same endpoints, visibly
-      different paths. Thirty seconds, no slides.
+      different paths.
 
    2. Note that steps 2 and 4 of the approach pattern are really
       "go down 40 mm from here" and "go back up 40 mm". Writing
       absolute coordinates for that is fragile. There is a better
-      way: MoveLinRelTrf, in intermediate/03.
+      way: MoveLinRelTrf, in 02_intermediate/03.
 
    NEXT   05_joint_motion_settings.mxprog — controlling speed.
    --------------------------------------------------------------- */

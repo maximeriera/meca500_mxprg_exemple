@@ -176,16 +176,15 @@ ResumeMotion()
    WHAT THIS DOES *NOT* DO
 
    Ready for motion is not the same as predictable. These four
-   commands do not clear anything the previous user left behind —
-   not a tool frame, not a restricted joint limit, not a work
-   zone, not simulation mode.
+   commands (after Deactivate) do not clear anything the
+   previous user left behind — not a tool frame, not a restricted
+   joint limit, not a work zone, not simulation mode.
+
+   Deactivate only wipes every non-persistent setting in one stroke.
 
    If you are on a robot you do not know, and you want the demo
    to behave the way it behaved when you rehearsed it, run
-   common/cold_start.mxprog instead of this file. It deactivates
-   and reactivates, which wipes every non-persistent setting in
-   one stroke, and it audits the persistent ones that
-   deactivation cannot touch.
+   00_common/00_cold_start.mxprog instead of this file.
    --------------------------------------------------------------- */
 
 
@@ -203,8 +202,8 @@ ResumeMotion()
        StartProgram("00_common/01_init")
 
    It is commented out below because StartProgram only finds
-   programs already SAVED ON THE ROBOT. Save common/init.mxprog
-   as "00_common/01_init" first, then uncomment. Read common/init.mxprog
+   programs already SAVED ON THE ROBOT. Save 00_common/01_init.mxprog
+   as "00_common/01_init" first, then uncomment. Read 00_common/01_init.mxprog
    — it is the most reusable thing in this repo. */
 
 // StartProgram("00_common/01_init")
@@ -255,8 +254,7 @@ MoveJoints(0, 0, 0, 0, 0, 0)
    1. Select just the line MoveJoints(30, 0, 0, 0, 0, 0) and
       press Ctrl+Enter. Only that line runs. This is how to demo
       a single command without running the whole file, and it is
-      the feature that makes the MecaPortal genuinely useful on
-      a call.
+      one feature that makes the MecaPortal genuinely useful.
 
    2. Run the whole file twice in a row. The second run is much
       quicker, because ActivateRobot and Home both find nothing

@@ -216,7 +216,7 @@ Examples are organised by **level**, and numbered so the reading order is the te
 02_intermediate/   How to make it useful. Frames, configurations, tooling.
 03_advanced/       How it goes into a real cell. Composition, variables, safety.
 ```
-
+Start with `00_common/` for configuration knowledge.
 Read `01_basic/` in order and you have the vocabulary.
 Read `02_intermediate/` and you can build something useful.
 Read `03_advanced/` and you can design a cell and answer an integrator's questions about it.
@@ -278,6 +278,13 @@ The table above covers eight of the thirteen. The remaining five are `SetRobotNa
 
 ## File index
 
+**`00_common/` — helpers**
+
+| File | Purpose |
+|---|---|
+| `00_cold_start.mxprog` | Save as `00_common/00_cold_start`; persistent-settings audit plus a deactivate/reactivate reset |
+| `01_init.mxprog` | Save as `00_common/01_init`; call with `StartProgram("00_common/01_init")` at the top of every program |
+
 **`01_basic/` — the vocabulary**
 
 | File | Teaches |
@@ -312,14 +319,6 @@ The table above covers eight of the thirteen. The remaining five are `SetRobotNa
 | `04_work_zone_and_collision.mxprog` | `SetWorkZoneLimits`, `SetToolSphere`, `SetCollisionCfg` |
 | `05_payload_and_torque_limits.mxprog` | `SetPayload`, `SetTorqueLimits` — accuracy and process guarding |
 | `06_time_based_motion.mxprog` | `SetMoveMode`, `SetMoveDuration` — moving on a fixed beat |
-
-**`00_common/` — helpers**
-
-| File | Purpose |
-|---|---|
-| `00_cold_start.mxprog` | Save as `00_common/00_cold_start`; persistent-settings audit plus a deactivate/reactivate reset |
-| `01_init.mxprog` | Save as `00_common/01_init`; call with `StartProgram("00_common/01_init")` at the top of every program |
-
 
 Two files are mostly prose, because the commands they cover cannot go in a running program: `03_advanced/04_work_zone_and_collision` (work zone and collision settings require the robot to be **deactivated**) and parts of `03_advanced/02_program_calls` (which needs sub-programs saved on the robot first). Both say so at the top and both still have a runnable section.
 

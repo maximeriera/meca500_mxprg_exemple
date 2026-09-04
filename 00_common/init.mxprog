@@ -1,0 +1,240 @@
+/* ==============================================================
+   init — put the robot in a known state
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   PURPOSE   Call this at the start of every program, so nothing
+             depends on what the previous program left behind
+   SAVE AS   lib/init      (on the robot, via the MecaPortal)
+   CALL      StartProgram("lib/init")
+   NEEDS     Robot activated + homed (see basic/01)
+   MOVES     Nothing. Settings only.
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   WHY THIS FILE EXISTS
+
+   Almost every setting on this robot is STICKY. Set a speed, a
+   tool frame or a blending value, and it stays that way for
+   every command that follows — including the commands of the
+   next program someone runs.
+
+   So a program that does not set what it depends on is not
+   really a program. It is a program plus an assumption about
+   whatever ran before it. That works on the bench and produces
+   the worst class of bug in a cell: the one where a sequence
+   behaves differently depending on what was run first, and the
+   engineer cannot reproduce it.
+
+   One line at the top of every program removes that entirely:
+
+       StartProgram("lib/init")
+
+   THE PART THAT CATCHES PEOPLE OUT
+
+   Many of these settings DO reset to their factory defaults —
+   but only when the robot is activated or reactivated. A robot
+   that stays activated all day, running program after program,
+   never gets that reset. Between two runs of your program, the
+   only thing that resets these settings is you.
+
+   Being explicit costs nothing and is worth doing even where it
+   duplicates the default, because "the default" is a fact about
+   the firmware version, not about your cell.
+
+   HOW TO USE IT
+
+   1. Open this file in the MecaPortal code editor.
+   2. Change the values below to suit your cell — particularly
+      SetTrf, which is wrong for every real tool.
+   3. Save it on the robot as "lib/init". The slash creates the
+      folder. Names are case sensitive, up to 63 characters,
+      letters, digits and underscores.
+   4. Put StartProgram("lib/init") at the top of every program.
+
+   WHY THIS FILE HAS NO DEACTIVATE/REACTIVATE BLOCK
+
+   Every example in this repo opens with a deactivate/reactivate
+   reset. This file deliberately does not, and must not.
+
+   It is called BY other programs, with StartProgram, after they
+   have already reset and reactivated. A deactivate in here would
+   tear down the robot state its caller just established, and
+   would wipe the settings this very file is about to apply.
+   Helpers that run inside another program's flow do not reset;
+   they configure.
+
+   WHAT IS DELIBERATELY NOT IN HERE
+
+   Four settings cannot go in any running program, because the
+   robot only accepts them while DEACTIVATED:
+
+       SetWorkZoneLimits(...)     SetToolSphere(...)
+       SetWorkZoneCfg(...)        SetCollisionCfg(...)
+
+   That is by design — a running program must not be able to
+   widen its own safety envelope. They are persistent and survive
+   a power cycle, so set them once at commissioning. See
+   advanced/04_work_zone_and_collision.mxprog.
+   --------------------------------------------------------------- */
+
+
+/* ============ 1. REFERENCE FRAMES ============================ */
+
+/* WRF — where the world is measured from. Zeros put it back on
+   the robot's own base (the BRF), which is the right neutral
+   starting point. A program that works in a fixture frame should
+   set its own SetWrf AFTER calling this file.
+   See intermediate/01_world_reference_frame.mxprog. */
+SetWrf(0, 0, 0, 0, 0, 0)
+
+/* TRF — where the tool tip is, measured from the flange. Zeros
+   put it back on the flange face.
+
+   ⚠ THIS IS THE LINE TO CHANGE. Zeros are correct only for a
+   bare flange. With any real tool fitted, every pose in every
+   program is wrong until this is right. For a Mecademic MEGP 25E
+   the offset is published; for anything else, measure it.
+   See intermediate/02_tool_reference_frame.mxprog. */
+SetTrf(0, 0, 0, 0, 0, 0)
+
+
+/* ============ 2. POSTURE CONFIGURATION ======================= */
+
+/* Let the robot pick the arm posture and the joint-6 revolution
+   closest to where it already is. This is the safe general
+   default and keeps motion small.
+
+   In a real cell, PIN THESE INSTEAD. Automatic selection is what
+   produces the occasional cycle that takes a surprising route,
+   because the choice depends on where the robot happened to
+   start. Comment out the two lines below and uncomment SetConf
+   to make every cycle identical.
+   See intermediate/04 and intermediate/05. */
+SetAutoConf(1)
+SetAutoConfTurn(1)
+
+// SetConf(1, 1, 1)         // pin the arm posture
+// SetConfTurn(0)           // pin the joint-6 revolution
+
+
+/* ============ 3. SPEEDS AND ACCELERATIONS ==================== */
+
+/* Joint-space moves — MoveJoints, MovePose. Percentages.
+   Firmware default is 25% velocity and 100% acceleration; we set
+   both explicitly and slower, because this repo is demo
+   material. Raise SetJointVel for production cycle times.
+
+   Note for the Meca500 R4: SetJointVel accepts up to 150, not
+   100, for backward compatibility. On an R3 the ceiling is 100. */
+SetJointVel(20)
+SetJointAcc(100)
+
+/* Cartesian moves — MoveLin and the relative variants. Real
+   units: mm/s and deg/s. Firmware default for linear velocity is
+   150 mm/s. Set both, because a move that translates and
+   reorients at once is governed by whichever is binding.
+   See basic/06_linear_motion_settings.mxprog. */
+SetCartLinVel(150)
+SetCartAngVel(90)
+
+/* SetCartAcc is deliberately left alone. Using it forces the
+   robot to a complete stop between moves EVEN WHEN BLENDING IS
+   ENABLED, which quietly undoes the next section. Set it only in
+   the specific program that needs it. */
+// SetCartAcc(50)
+
+/* Velocity-based mode: the speeds above govern, and durations
+   fall out of them. The alternative is time-based mode, where
+   you specify how long each move should take.
+   See advanced/06_time_based_motion.mxprog. */
+SetMoveMode(0)
+
+
+/* ============ 4. BLENDING ==================================== */
+
+/* Round the corners between moves rather than stopping at every
+   waypoint. On by default at 100%, but set explicitly because a
+   previous program may well have turned it off at a work point
+   and not turned it back on.
+
+   Individual programs should still drop to SetBlending(0) around
+   points where the tool actually has to arrive.
+   See intermediate/06_blending.mxprog. */
+SetBlending(100)
+
+
+/* ============ 5. PAYLOAD ===================================== */
+
+/* What is hanging off the flange, in kg, and where its centre of
+   mass sits, in mm from the flange.
+
+   Zero means "bare flange". If a tool is fitted, put its real
+   mass here — this is the cheapest accuracy improvement
+   available and it is routinely skipped. Programs that pick up a
+   part should raise it while carrying and drop it again after
+   placing.
+   See advanced/05_payload_and_torque_limits.mxprog. */
+SetPayload(0, 0, 0, 0)
+
+
+/* ============ 6. TORQUE LIMITS =============================== */
+
+/* Release any torque limits a previous program tightened, so
+   ordinary motion is not tripping a guard meant for one delicate
+   insertion. 100% on every joint is the firmware default and
+   nothing will realistically trip against it.
+
+   The config below restores the firmware default too: severity 0
+   means NO ACTION on a trip, and mode 2 is deviation-from-
+   predicted detection. Note that there is no "detection off"
+   mode — every mode value is an active detection method, so it
+   is the SEVERITY that decides whether a trip does anything.
+   A program that wants torque guarding sets both, for the few
+   centimetres where contact is plausible, then releases them. */
+SetTorqueLimits(100, 100, 100, 100, 100, 100)
+SetTorqueLimitsCfg(0, 2)
+
+
+/* ============ 7. MARKER ====================================== */
+
+/* A line in the robot log saying initialisation finished. When
+   you are reading a log after the fact, knowing exactly where
+   each cycle began is worth the one command. */
+LogTrace("lib/init complete")
+
+/* A checkpoint the host can wait on, so a PLC or Python program
+   knows initialisation is done before it issues real work.
+   Number 100 is reserved for this across the repo — keep your
+   program's own checkpoints below it.
+   See basic/07_delay_and_sequencing.mxprog. */
+SetCheckpoint(100)
+
+
+/* ---------------------------------------------------------------
+   A NOTE ON CALLING THIS FROM ANOTHER PROGRAM
+
+   StartProgram runs a program saved in the robot's memory, once.
+   If it is not saved, you get [3017], no offline program saved —
+   so save this file before putting the call anywhere.
+
+   The settings above are motion commands, so they enter the
+   motion queue in order. Placing StartProgram("lib/init") at the
+   TOP of a program therefore means these settings are applied
+   before that program's own moves, which is exactly what you
+   want. A program that needs its own frame or speed simply sets
+   it after the call, overriding what is here.
+
+   TRY THIS IN FRONT OF A CUSTOMER
+
+   1. Run intermediate/06_blending.mxprog, which deliberately
+      leaves blending part-way through its demo. Then run a
+      pick-and-place and watch it behave differently than
+      expected. Then add StartProgram("lib/init") at the top and
+      run again. This is a concrete, thirty-second demonstration
+      of why cells become flaky, and how one line fixes it.
+
+   2. For an integrator, the argument is repeatability: every
+      cycle starts from an identical, explicitly declared state,
+      and that state is under version control in one file rather
+      than scattered across twenty programs.
+   --------------------------------------------------------------- */

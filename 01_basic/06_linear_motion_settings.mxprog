@@ -1,0 +1,156 @@
+/* ==============================================================
+   06 — Motion settings for linear moves
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   SetCartLinVel, SetCartAngVel, SetCartAcc
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     Speed in mm/s — a number the customer already knows
+   TIME      ~40 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   REAL UNITS
+
+   Joint moves are tuned in percentages. Cartesian moves are
+   tuned in millimetres per second:
+
+       SetCartLinVel(v)    tool tip linear velocity, mm/s
+                           (0.001 to 5000; default 150)
+       SetCartAngVel(w)    tool reorientation velocity, deg/s
+       SetCartAcc(p)       Cartesian acceleration, % of max
+
+   This matters more than it sounds. Process speeds are specified
+   in real units: a dispensing spec says 25 mm/s, a wipe test
+   says 100 mm/s, an insertion says 5 mm/s. With SetCartLinVel
+   you type the number from the spec. There is no calibration
+   step and no conversion to get wrong.
+
+   These settings affect ONLY the linear commands — MoveLin,
+   MoveLinRelTrf, MoveLinRelWrf. They have no effect on
+   MoveJoints or MovePose, which are joint-space moves and obey
+   SetJointVel. A customer who sets SetCartLinVel and sees
+   nothing change is almost always using MovePose.
+
+   TWO VELOCITIES, ONE MOVE
+
+   A linear move usually translates AND reorients at the same
+   time. Those are governed separately: SetCartLinVel for the
+   travel, SetCartAngVel for the turning. The robot respects
+   both, so whichever is the binding constraint sets the pace.
+   If a move seems inexplicably slow, and the tip is turning a
+   long way while barely translating, SetCartAngVel is the one
+   holding it back.
+
+   THE CEILING STILL APPLIES
+
+   You can ask for 5000 mm/s and not get it. The actual tip
+   velocity may be lower — never higher — than requested,
+   because the joint velocity limits still apply underneath. Near
+   a singularity, a modest tip speed can demand enormous joint
+   speed, and the robot will slow the tip to stay within limits
+   rather than exceed them.
+
+   A NOTE ON SetCartAcc
+
+   Using SetCartAcc brings the robot to a complete stop between
+   moves even when blending is enabled. If you are chasing cycle
+   time with blending (intermediate/06), be aware that this
+   command works against it.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(20)
+
+// --- Get into position ----------------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+MovePose(190, -70, 280, 0, 90, 0)
+Delay(1)
+
+
+// --- Process speed: 10 mm/s -----------------------------------
+// Insertion, probing, delicate placement. Deliberate and slow.
+SetCartLinVel(10)
+MoveLin(190, 70, 280, 0, 90, 0)
+MoveLin(190, -70, 280, 0, 90, 0)
+
+Delay(1)
+
+
+// --- Process speed: 100 mm/s ----------------------------------
+// A typical dispensing or inspection pass. Same two lines.
+SetCartLinVel(100)
+MoveLin(190, 70, 280, 0, 90, 0)
+MoveLin(190, -70, 280, 0, 90, 0)
+
+Delay(1)
+
+
+// --- Transfer speed: 500 mm/s ---------------------------------
+// Moving between stations, where the line is required but the
+// speed is not part of the process.
+SetCartLinVel(500)
+MoveLin(190, 70, 280, 0, 90, 0)
+MoveLin(190, -70, 280, 0, 90, 0)
+
+Delay(1)
+
+
+// --- Translating and reorienting together ---------------------
+// Same 140 mm of travel, but the tool also turns 60 degrees
+// along the way. Watch how the angular limit governs the pace.
+SetCartLinVel(200)
+SetCartAngVel(15)                       // deliberately restrictive
+MoveLin(190, 70, 280, 0, 90, 60)
+
+// Now allow the reorientation to keep up. Same move, same linear
+// velocity, and it completes far faster.
+SetCartAngVel(180)
+MoveLin(190, -70, 280, 0, 90, 0)
+
+
+// --- Back to defaults and home --------------------------------
+SetCartLinVel(150)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   TRY THIS IN FRONT OF A CUSTOMER
+
+   1. Ask what speed their process runs at, then type it into
+      SetCartLinVel and run the pass. Watching their own number
+      execute is more convincing than any datasheet figure.
+
+   2. Set SetCartLinVel(1000) and run a pass. It will not be ten
+      times faster than the 100 mm/s pass over this short stroke
+      — acceleration and the joint limits are governing, not
+      your requested velocity. An honest demo of this builds more
+      credibility than avoiding it.
+
+   NEXT   07_delay_and_sequencing.mxprog — how the queue really
+          executes, and how to synchronise with the outside world.
+   --------------------------------------------------------------- */

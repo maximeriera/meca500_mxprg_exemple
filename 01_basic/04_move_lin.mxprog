@@ -1,0 +1,160 @@
+/* ==============================================================
+   04 — MoveLin: the straight line
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   Linear motion, and why it is not the default
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     Same start and end as example 03, different path
+   TIME      ~30 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   THE COMMAND
+
+       MoveLin(x, y, z, alpha, beta, gamma)
+
+   Identical arguments to MovePose. Completely different promise.
+
+   MovePose says: end up at this pose.
+   MoveLin says:  end up at this pose, AND make the tool tip
+                  travel there in a straight line, reorienting
+                  smoothly as it goes.
+
+   That guarantee is what you need whenever the path is part of
+   the job:
+
+     - pulling a part straight out of a fixture or a chuck
+     - inserting a pin, a connector, a test probe
+     - dispensing a bead of adhesive along an edge
+     - approaching and retreating from a pick, so the gripper
+       does not swing into the part it is about to grab
+
+   WHAT IT COSTS
+
+   A straight line in space is a complicated thing in joint
+   space — the six joints have to be continuously coordinated to
+   keep the tip on the line. Three consequences, all worth
+   knowing before a customer finds them:
+
+   1. IT IS SLOWER. Speed is bounded by the joint that is working
+      hardest at the tightest point of the path. A joint move
+      between the same two points is usually faster.
+
+   2. IT CAN BE REFUSED. If the straight line would pass through
+      a singularity or run a joint past its limit, the robot
+      rejects the command and DOES NOT START MOVING. That is the
+      right behaviour: you get an error, not a robot that stops
+      halfway through an insertion. Note the difference from a
+      joint move, which can almost always be executed.
+
+   3. IT HOLDS THE ARM POSTURE. The start and end postures have
+      to share the same configuration {cs, ce, cw} — the robot
+      will not flip its elbow or wrist in the middle of a
+      straight line. See intermediate/04.
+
+   THE RULE
+
+   Use MoveLin only where the straight line is genuinely
+   required — typically the last few centimetres into a part and
+   the first few back out. Use MoveJoints or MovePose for
+   everything else. This is the single most common mistake in a
+   first robot program: making every move linear, then wondering
+   why the cycle time is poor and why the robot occasionally
+   refuses a position it can plainly reach.
+
+   Note that the speed for these moves is set in mm/s with
+   SetCartLinVel — a real velocity, not a percentage. See
+   06_linear_motion_settings.mxprog.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(15)
+SetCartLinVel(40)          // 40 mm/s. Slow enough to watch.
+
+// --- Start from the zero position -----------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+Delay(1)
+
+
+// --- The same three points as example 03 ----------------------
+// Move into the starting pose. This first one is a MovePose,
+// because getting into position is repositioning, not path work.
+MovePose(190, 0, 248.9, 0, 90, 0)
+
+Delay(1)
+
+// Straight across in Y. Sight down the line and it holds.
+MoveLin(190, 80, 248.9, 0, 90, 0)
+
+Delay(1)
+
+// This is the comparison that sells it. In 03_move_pose.mxprog
+// the equivalent move bowed outward. Here the tip runs dead
+// straight across and up, with the orientation blending evenly
+// along the way.
+MoveLin(190, -80, 308.9, 0, 90, 0)
+
+Delay(1)
+
+
+// --- The approach-and-retract pattern -------------------------
+// This is the shape of nearly every real pick or place, and it
+// is worth showing on its own.
+
+// 1. Get above the target. Fast, path irrelevant, so MovePose.
+MovePose(190, 0, 300, 0, 90, 0)
+
+// 2. Descend straight down onto it. Path critical, so MoveLin.
+MoveLin(190, 0, 260, 0, 90, 0)
+
+// 3. (A gripper would close here. See intermediate/07.)
+Delay(0.5)
+
+// 4. Lift straight back up before going anywhere. Skipping this
+//    is how parts get dragged out of fixtures.
+MoveLin(190, 0, 300, 0, 90, 0)
+
+
+// --- Back to zero ---------------------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   TRY THIS IN FRONT OF A CUSTOMER
+
+   1. Run 03 and 04 back to back. Same endpoints, visibly
+      different paths. Thirty seconds, no slides.
+
+   2. Note that steps 2 and 4 of the approach pattern are really
+      "go down 40 mm from here" and "go back up 40 mm". Writing
+      absolute coordinates for that is fragile. There is a better
+      way: MoveLinRelTrf, in intermediate/03.
+
+   NEXT   05_joint_motion_settings.mxprog — controlling speed.
+   --------------------------------------------------------------- */

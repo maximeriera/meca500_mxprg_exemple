@@ -1,0 +1,160 @@
+/* ==============================================================
+   03 — MovePose: naming a position in space
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   Cartesian targets, and how they differ from joint ones
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     You name WHERE it ends up, not HOW it gets there
+   TIME      ~20 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   FROM ANGLES TO SPACE
+
+   MoveJoints asked for six angles. That is fine for the robot
+   and useless for everyone else — nobody knows a part's location
+   as a set of joint angles.
+
+   MovePose asks for a POSE instead: a position and an
+   orientation in ordinary three-dimensional space.
+
+       MovePose(x, y, z, alpha, beta, gamma)
+
+     x, y, z              where the tool tip is, in mm
+     alpha, beta, gamma   how the tool is oriented, in degrees
+
+   Read it as: "put the TRF at this pose, expressed in the WRF."
+
+     TRF — Tool Reference Frame. The tool tip. By default it sits
+           on the robot's flange; you move it to the real tip of
+           the real gripper with SetTrf. See intermediate/02.
+     WRF — World Reference Frame. The origin everything is
+           measured from. By default it is the robot's base; you
+           move it to a fixture or a table with SetWrf. See
+           intermediate/01.
+
+   Those two frames are what turn a robot into an application,
+   and they are the reason this command is worth the extra
+   concept. A pose stays correct when you change grippers or move
+   the robot on the bench — you redefine a frame, and every pose
+   in every program follows.
+
+   THE ORIENTATION ANGLES
+
+   alpha, beta, gamma are Euler angles, mobile XYZ convention.
+   You will not compute these by hand and neither will a
+   customer. In practice you jog the robot to the position you
+   want and let the MecaPortal write the numbers for you: right
+   click in the code editor, then "TO CURRENT POSITION", and it
+   inserts the command with the current pose already filled in,
+   using the current TRF and WRF.
+
+   THE IMPORTANT SUBTLETY
+
+   MovePose specifies the DESTINATION in Cartesian space. It does
+   NOT specify the path. Internally the robot solves for the
+   joint angles that produce your pose, then performs a
+   joint-space move to them — exactly like MoveJoints.
+
+   So the tool tip travels a smooth, repeatable arc, not a
+   straight line. If you need the straight line, that is MoveLin,
+   and it is the next file.
+
+     MoveJoints  target as angles      path is an arc
+     MovePose    target as a pose      path is an arc
+     MoveLin     target as a pose      path is a straight line
+
+   MovePose is the one you will use most: it takes coordinates a
+   human can reason about, while keeping the speed and freedom of
+   a joint-space move.
+
+   ONE MORE THING
+
+   A single pose can usually be reached by eight different arm
+   postures — elbow up or down, wrist flipped or not. The robot
+   picks one automatically. When you need to force the choice,
+   that is SetConf, in intermediate/04.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(15)
+
+// --- Start from the zero position -----------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+Delay(1)
+
+/* This pose is the zero position expressed in Cartesian terms —
+   the same robot posture as the line above, described the other
+   way. Running it should produce no visible movement, which is
+   the point: two vocabularies, one position. */
+MovePose(190, 0, 308.9, 0, 90, 0)
+
+Delay(1)
+
+
+// --- Now move in space ----------------------------------------
+// Only Z changed: 60 mm lower. Compare this to MoveJoints, where
+// "lower the tool by 60 mm" is not something you can express
+// without doing the geometry yourself.
+MovePose(190, 0, 248.9, 0, 90, 0)
+
+Delay(1)
+
+// Only Y changed: 80 mm across. Again, one number, one intent.
+MovePose(190, 80, 248.9, 0, 90, 0)
+
+Delay(1)
+
+// Watch the tool tip on this one. We ask for a straight-line
+// distance back across and up, and the tip visibly bows out on
+// the way. That curve is the joint-space path. Nothing is wrong
+// — we simply never asked for a straight line.
+MovePose(190, -80, 308.9, 0, 90, 0)
+
+Delay(1)
+
+
+// --- Back to zero ---------------------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   TRY THIS IN FRONT OF A CUSTOMER
+
+   1. Jog the robot anywhere by hand, then right click in the
+      editor and insert MovePose "TO CURRENT POSITION". Teaching
+      a point takes about four seconds. This lands well with
+      anyone who has taught points on a pendant.
+
+   2. Run the last MovePose and trace the arc with your finger.
+      Then open 04_move_lin.mxprog and run the equivalent line.
+      The difference between the two is the whole lesson.
+
+   NEXT   04_move_lin.mxprog — when the path itself matters.
+   --------------------------------------------------------------- */

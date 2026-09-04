@@ -1,0 +1,156 @@
+/* ==============================================================
+   05 — Motion settings for joint moves
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   SetJointVel, SetJointAcc, SetJointVelLimit
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     The same move, four times, at four different speeds
+   TIME      ~40 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   SETTINGS ARE NOT MOTIONS
+
+   SetJointVel does not move anything. It changes a setting that
+   every subsequent motion command obeys, until something changes
+   it again.
+
+   That is why tuning a program never means rewriting it. The
+   targets stay; you change one number at the top.
+
+   These settings ride in the motion queue alongside the moves,
+   in order — so a SetJointVel placed halfway down the file takes
+   effect exactly there, not immediately when the file is run.
+   You can therefore have a fast approach and a slow final
+   descent in the same program, just by putting the setting
+   between them.
+
+   THE THREE COMMANDS
+
+       SetJointVel(p)        target joint velocity, % of max
+       SetJointAcc(p)        joint acceleration, % of max
+       SetJointVelLimit(p)   hard ceiling on joint velocity, %
+
+   All percentages, because a joint's maximum speed is a property
+   of that joint, not a number the user should have to look up.
+
+   SetJointVel vs SetJointVelLimit is the one people confuse:
+
+     SetJointVel      the speed you are ASKING FOR on joint-space
+                      moves. A target.
+     SetJointVelLimit a hard CEILING that applies to every Move*
+                      command, including Cartesian ones and
+                      velocity-mode ones.
+
+   Use SetJointVel to tune a program. Use SetJointVelLimit to
+   make a cell safe to stand in, or to keep a fragile payload
+   from being whipped around — it cannot be exceeded by anything
+   downstream.
+
+   ACCELERATION IS THE ONE PEOPLE FORGET
+
+   On short moves, acceleration matters more than velocity. Over
+   50 mm the robot never reaches the speed you asked for; it
+   spends the whole move accelerating and decelerating. If a
+   customer says a short-stroke cycle feels slow, the answer is
+   usually SetJointAcc, not SetJointVel.
+
+   DEFAULTS COME BACK
+
+   These are reset to their defaults every time the robot is
+   activated or reactivated. A program that depends on a
+   particular speed must set it, every run. Do not assume the
+   value left over from the last session.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+// --- Baseline -------------------------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+Delay(1)
+
+
+// --- Slow: 10% ------------------------------------------------
+// Demo speed. Legible, and comfortable to stand next to.
+SetJointVel(10)
+MoveJoints(60, -20, 30, 0, 40, 0)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+Delay(1)
+
+
+// --- Moderate: 40% --------------------------------------------
+// Identical target lines. Only the setting above them changed.
+SetJointVel(40)
+MoveJoints(60, -20, 30, 0, 40, 0)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+Delay(1)
+
+
+// --- Full speed: 100% -----------------------------------------
+// This is the number that ends the "is it fast enough?"
+// conversation. Give people room before running it.
+SetJointVel(100)
+MoveJoints(60, -20, 30, 0, 40, 0)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+Delay(1)
+
+
+// --- Full speed, low acceleration -----------------------------
+// Velocity is still 100%, but the robot is now given a long,
+// gentle ramp. It looks noticeably softer, and on a short move
+// it is actually slower overall — which is the lesson.
+SetJointAcc(5)
+MoveJoints(60, -20, 30, 0, 40, 0)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+Delay(1)
+
+
+// --- Put the settings back ------------------------------------
+// Leave the robot in a sane state for whoever runs the next
+// example. Good practice in a shared demo cell.
+SetJointAcc(100)
+SetJointVel(15)
+
+
+/* ---------------------------------------------------------------
+   TRY THIS IN FRONT OF A CUSTOMER
+
+   1. Run the whole file without commentary and let them watch
+      the four passes. The point makes itself.
+
+   2. Add SetJointVelLimit(20) at the very top and run again.
+      Every pass is now slow, including the 100% one. That is
+      the difference between a target and a ceiling, demonstrated
+      in one line.
+
+   NEXT   06_linear_motion_settings.mxprog — the same idea for
+          Cartesian moves, where the units are real ones.
+   --------------------------------------------------------------- */

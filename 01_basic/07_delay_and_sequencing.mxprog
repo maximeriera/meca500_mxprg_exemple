@@ -1,0 +1,151 @@
+/* ==============================================================
+   07 — Delay, the motion queue, and checkpoints
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   Delay, SetCheckpoint, and what "finished" means
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     The log panel as much as the robot
+   TIME      ~25 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   THE MOTION QUEUE
+
+   Every motion command you send goes into a queue inside the
+   robot and is executed first in, first out. Commands are
+   ACCEPTED almost instantly; they are EXECUTED in order, at the
+   speed of physics.
+
+   So there are two different clocks in play:
+
+     - your program, racing to the end of the file
+     - the robot, working through the queue behind it
+
+   For a self-contained motion sequence this never matters. It
+   matters enormously the moment the robot has to agree with
+   something else about when a step is done — a gripper, a
+   conveyor, a camera trigger, a PLC handshake.
+
+   DELAY: PAUSE THE QUEUE
+
+       Delay(t)          t in seconds
+
+   Delay is itself a motion command, so it sits in the queue and
+   holds it for t seconds when it gets there. It does not pause
+   your host program, and it does not pause anything else on the
+   robot.
+
+   Use it for dwells that are genuinely about time: letting an
+   adhesive wet out, letting a vacuum cup build suction, letting
+   a part settle before releasing it. Use it in demos to make a
+   sequence readable.
+
+   Do NOT use it as a handshake. "Delay(2) should be enough for
+   the gripper to close" works on the bench and fails on the line
+   at 3 a.m. That is what checkpoints are for.
+
+   SETCHECKPOINT: TELL ME WHEN YOU GET HERE
+
+       SetCheckpoint(n)  n from 1 to 8000
+
+   Drop this between motion commands. When the robot's execution
+   actually reaches that point in the queue, it emits [3030][n].
+   Your host program waits for that message and then knows — not
+   estimates — that everything before it has physically
+   completed.
+
+   From the manual, and worth quoting to an integrator verbatim:
+   using a checkpoint is the only reliable way to confirm that a
+   specific motion sequence has completed. Do not build a
+   handshake on the end-of-motion or end-of-block messages; they
+   can arrive well before the sequence is finished, or not at
+   all if they have not been enabled.
+
+   If the queue is cleared, or the robot is deactivated, errors
+   out, or hits a safety stop, a pending checkpoint is discarded
+   and reported as [3040][n] instead — so a host waiting on it
+   learns that it will never arrive, rather than hanging.
+
+   This one command is the backbone of every real integration.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(20)
+
+// --- A sequence with dwells -----------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+// Checkpoint 1: "in the start position". A host program would
+// wait for [3030][1] here before releasing a part onto the
+// fixture, or triggering a camera.
+SetCheckpoint(1)
+
+MovePose(190, 0, 280, 0, 90, 0)
+SetCheckpoint(2)
+
+// A real dwell: this is the kind of pause a process actually
+// asks for — hold still while something else happens.
+Delay(2)
+
+MovePose(190, 60, 280, 0, 90, 0)
+SetCheckpoint(3)
+
+Delay(1)
+
+MovePose(190, -60, 280, 0, 90, 0)
+SetCheckpoint(4)
+
+
+// --- Back to zero ---------------------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+// Checkpoint 8: "cycle complete, safe to load the next part".
+SetCheckpoint(8)
+
+
+/* ---------------------------------------------------------------
+   TRY THIS IN FRONT OF A CUSTOMER
+
+   1. Open the log panel before running. Watch [3030][1] through
+      [3030][8] appear as the robot physically reaches each
+      point. That stream of messages IS the integration story —
+      it is exactly what a PLC or a Python host subscribes to.
+
+   2. Run the file, and while the robot is still moving, press
+      the stop button. The checkpoints that had not yet been
+      reached come back as [3040][n] — discarded. Show that the
+      host is never left waiting on something that will not
+      arrive. Integrators care about this more than about speed.
+
+   3. Ask how they currently know a robot has finished a move.
+      If the answer involves a timer, you have found a real
+      problem worth solving.
+
+   NEXT   intermediate/01_world_reference_frame.mxprog — making
+          coordinates mean something to the application.
+   --------------------------------------------------------------- */

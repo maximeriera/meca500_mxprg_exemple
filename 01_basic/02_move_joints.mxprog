@@ -1,0 +1,156 @@
+/* ==============================================================
+   02 — MoveJoints: the joint-space move
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   What a joint move is, and when to reach for it
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     All six joints start together and stop together
+   TIME      ~25 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   WHAT IS A JOINT MOVE?
+
+   A Meca500 has six rotary joints. A joint move tells each one
+   the ANGLE it should end up at. Nothing else.
+
+       MoveJoints(t1, t2, t3, t4, t5, t6)
+
+   Six numbers, in degrees, one per joint, numbered from the base
+   (joint 1) to the flange (joint 6). All zeros is the robot's
+   "zero position", the reference position marked on the robot
+   body. Worth knowing what it actually looks like: the flange
+   ends up pointing HORIZONTALLY FORWARD, not upward — roughly
+   190 mm out from the base axis and 309 mm up from the bench.
+
+   This is the most direct thing you can ask a robot to do. There
+   is no maths between your command and the motors: you name the
+   angles, the joints rotate to them.
+
+   THE PART CUSTOMERS ASK ABOUT
+
+   The robot does NOT move each joint one after another, and it
+   does not move them all at full speed until each arrives. It
+   SYNCHRONISES them: every joint starts at the same instant, and
+   every joint arrives at the same instant. The joint with the
+   furthest to travel sets the pace; the others are slowed to
+   match. That is what makes the motion look like one gesture
+   instead of six.
+
+   THE TRADE-OFF
+
+   Because you specified angles and not a position in space, the
+   TOOL TIP takes whatever path falls out of the geometry. It is
+   smooth and it is repeatable — run it a thousand times and you
+   get the same curve — but it is an arc, not a straight line,
+   and it is hard to predict by eye.
+
+   So:
+     - Use MoveJoints to REPOSITION.  Getting from one side of
+       the cell to the other, going to a home or a park position,
+       clearing an obstacle. It is the fastest and least
+       constrained way to move, and it can never fail because of
+       a singularity.
+     - Use MoveLin when the PATH ITSELF matters. Pulling a part
+       straight out of a fixture, laying a bead, entering a
+       chuck. See 04_move_lin.mxprog.
+
+   A joint move only fails for one reason: an angle outside the
+   joint's limits. The robot checks this before it starts moving,
+   so a bad target does not produce a half-completed motion — it
+   produces an error and a robot that has not moved.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+// Slow, so the demo is legible and safe to stand next to.
+// This is a percentage of maximum joint speed, not a velocity.
+// Raise it to 100 to show the real cycle time.
+SetJointVel(15)
+
+
+// --- Start from the zero position -----------------------------
+// All six joints at 0 deg, flange pointing forward.
+// Every example in basic/ starts and ends here, so you can run
+// them back to back without re-jogging the robot.
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+Delay(1)
+
+
+// --- One joint at a time --------------------------------------
+// Only the first number changes, so only joint 1 turns: the whole
+// arm swings 45 deg about the base. This is the clearest way to
+// show someone what the six numbers actually mean.
+MoveJoints(45, 0, 0, 0, 0, 0)
+
+Delay(1)
+
+// Now joints 2 and 3 reshape the arm, while joint 1 stays where
+// it is. Watch the tool tip: it swings through an arc.
+// Nobody asked for that arc — it is simply what the geometry does
+// when those two joints rotate.
+MoveJoints(45, -30, 45, 0, 0, 0)
+
+Delay(1)
+
+
+// --- All six at once ------------------------------------------
+// The interesting one. Every joint has a different distance to
+// travel, and joint 1 has the furthest (from +45 to -45).
+//
+// Watch the start and the finish, not the middle: everything
+// begins moving in the same instant and everything settles in
+// the same instant. That is the synchronisation described above.
+MoveJoints(-45, -30, 45, 0, 60, 90)
+
+Delay(1)
+
+
+// --- Back to zero ---------------------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   TRY THIS IN FRONT OF A CUSTOMER
+
+   1. Select any single MoveJoints line and press Ctrl+Enter to
+      run just that line. Change one number, run it again. This
+      is the fastest way to make the six-numbers idea land.
+
+   2. Change SetJointVel(15) to SetJointVel(100) and run the whole
+      file. Same path, same targets — dramatically shorter cycle.
+      Speed is a setting, not a rewrite.
+
+   3. Try MoveJoints(0, 0, 100, 0, 0, 0). The robot refuses and
+      reports an error, because joint 3 stops at 70 deg. Note
+      that it refuses BEFORE moving. Then press the run button
+      (now red) to reset the error, and resume.
+
+   NEXT   03_move_pose.mxprog — naming a position in space
+          instead of a set of angles.
+   --------------------------------------------------------------- */

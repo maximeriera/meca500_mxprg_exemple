@@ -54,7 +54,7 @@
 
    Using SetCartAcc brings the robot to a complete stop between
    moves even when blending is enabled. If you are chasing cycle
-   time with blending (intermediate/06), be aware that this
+   time with blending (02_intermediate/06), be aware that this
    command works against it.
    --------------------------------------------------------------- */
 
@@ -141,15 +141,14 @@ MoveJoints(0, 0, 0, 0, 0, 0)
 /* ---------------------------------------------------------------
    THINGS TO TRY
 
-   1. Ask what speed their process runs at, then type it into
-      SetCartLinVel and run the pass. Watching their own number
-      execute is more convincing than any datasheet figure.
+   1. Get the speed your process runs at, then type it into
+      SetCartLinVel and run the pass. Watch your own number
+      execute.
 
    2. Set SetCartLinVel(1000) and run a pass. It will not be ten
       times faster than the 100 mm/s pass over this short stroke
       — acceleration and the joint limits are governing, not
-      your requested velocity. An honest demo of this builds more
-      credibility than avoiding it.
+      your requested velocity.
 
    NEXT   07_delay_and_sequencing.mxprog — how the queue really
           executes, and how to synchronise with the outside world.

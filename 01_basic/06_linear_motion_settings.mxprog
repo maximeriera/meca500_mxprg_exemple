@@ -139,7 +139,7 @@ MoveJoints(0, 0, 0, 0, 0, 0)
 
 
 /* ---------------------------------------------------------------
-   TRY THIS IN FRONT OF A CUSTOMER
+   THINGS TO TRY
 
    1. Ask what speed their process runs at, then type it into
       SetCartLinVel and run the pass. Watching their own number

@@ -145,7 +145,7 @@ MoveJoints(0, 0, 0, 0, 0, 0)
 
 
 /* ---------------------------------------------------------------
-   TRY THIS IN FRONT OF A CUSTOMER
+   THINGS TO TRY
 
    1. Jog the robot anywhere by hand, then right click in the
       editor and insert MovePose "TO CURRENT POSITION". Teaching

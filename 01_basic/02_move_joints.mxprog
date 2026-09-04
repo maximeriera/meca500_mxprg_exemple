@@ -136,7 +136,7 @@ MoveJoints(0, 0, 0, 0, 0, 0)
 
 
 /* ---------------------------------------------------------------
-   TRY THIS IN FRONT OF A CUSTOMER
+   THINGS TO TRY
 
    1. Select any single MoveJoints line and press Ctrl+Enter to
       run just that line. Change one number, run it again. This

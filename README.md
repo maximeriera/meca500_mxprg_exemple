@@ -331,7 +331,7 @@ Every file ends with a **THINGS TO TRY** block — two or three concrete exercis
 1. Open the MecaPortal and connect to the robot **in control mode** — you cannot save or run programs from monitoring mode.
 2. Load the `.mxprog` file into the code editor with the *load from computer* icon.
 3. **Read the header block.** Check the preconditions match your setup, and that the poses are clear of anything you have mounted.
-4. Press **run** — or select a few lines and press `Ctrl` + `Enter` to run only those, which is the best way to study one command at a time.
+4. We recommend running the program line by line with the **step** button. Optionally, press **run** to execute the whole program, or select a section and press `Ctrl` + `Enter` to run only that section.
 
 You do not need to activate or home first: every example does that itself.
 

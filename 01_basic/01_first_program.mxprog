@@ -11,7 +11,7 @@
    ============================================================== */
 
 /* ---------------------------------------------------------------
-   Ϫ BEFORE YOU PRESS RUN
+   /!\ BEFORE YOU PRESS RUN
 
    This program HOMES the robot, which moves every joint. Clear
    the area around the arm and the gripper first. The manual is
@@ -101,7 +101,7 @@
       It does not move the arm. It does NOT reset persistent
       settings — joint limits, work zone, tool sphere, collision
       and calibration config all survive. See
-      common/cold_start.mxprog for those. */
+      00_common/00_cold_start.mxprog for those. */
 DeactivateRobot()
 
 
@@ -200,14 +200,14 @@ ResumeMotion()
    That is what the init helper is for. One line, and every
    setting this repo cares about is explicit:
 
-       StartProgram("lib/init")
+       StartProgram("00_common/01_init")
 
    It is commented out below because StartProgram only finds
    programs already SAVED ON THE ROBOT. Save common/init.mxprog
-   as "lib/init" first, then uncomment. Read common/init.mxprog
+   as "00_common/01_init" first, then uncomment. Read common/init.mxprog
    — it is the most reusable thing in this repo. */
 
-// StartProgram("lib/init")
+// StartProgram("00_common/01_init")
 
 // Until you have saved it, set the two that matter here:
 SetJointVel(15)
@@ -250,7 +250,7 @@ MoveJoints(0, 0, 0, 0, 0, 0)
    the robot — a gripper, a conveyor, a camera. The tool for that
    is SetCheckpoint(), covered in 07_delay_and_sequencing.mxprog.
 
-   TRY THIS
+   THINGS TO TRY
 
    1. Select just the line MoveJoints(30, 0, 0, 0, 0, 0) and
       press Ctrl+Enter. Only that line runs. This is how to demo

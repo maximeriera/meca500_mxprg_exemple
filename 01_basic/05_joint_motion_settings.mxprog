@@ -42,17 +42,19 @@
                       command, including Cartesian ones and
                       velocity-mode ones.
 
-   Use SetJointVel to tune a program. Use SetJointVelLimit to
-   make a cell safe to stand in, or to keep a fragile payload
-   from being whipped around — it cannot be exceeded by anything
-   downstream.
+   Use SetJointVel to tune a program. Use SetJointVelLimit to keep
+   a fragile payload from being whipped around — it cannot be exceeded
+   by anything downstream.
+
+   /!\ SetJointVelLimit is not a safety limit.
+   It is a convenience for the programmer, not a safety feature.
 
    ACCELERATION IS THE ONE PEOPLE FORGET
 
-   On short moves, acceleration matters more than velocity. Over
+   On short moves, acceleration matters more than velocity. under
    50 mm the robot never reaches the speed you asked for; it
    spends the whole move accelerating and decelerating. If a
-   customer says a short-stroke cycle feels slow, the answer is
+   you think a short-stroke cycle feels slow, the answer is
    usually SetJointAcc, not SetJointVel.
 
    DEFAULTS COME BACK
@@ -143,13 +145,12 @@ SetJointVel(15)
 /* ---------------------------------------------------------------
    THINGS TO TRY
 
-   1. Run the whole file without commentary and let them watch
+   1. Run the whole file without commentary and watch
       the four passes. The point makes itself.
 
    2. Add SetJointVelLimit(20) at the very top and run again.
       Every pass is now slow, including the 100% one. That is
-      the difference between a target and a ceiling, demonstrated
-      in one line.
+      the difference between a target and a ceiling.
 
    NEXT   06_linear_motion_settings.mxprog — the same idea for
           Cartesian moves, where the units are real ones.

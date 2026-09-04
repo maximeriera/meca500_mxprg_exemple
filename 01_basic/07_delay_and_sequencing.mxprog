@@ -37,7 +37,7 @@
 
    Use it for dwells that are genuinely about time: letting an
    adhesive wet out, letting a vacuum cup build suction, letting
-   a part settle before releasing it. Use it in demos to make a
+   a part settle before releasing it. Used in demos to make a
    sequence readable.
 
    Do NOT use it as a handshake. "Delay(2) should be enough for
@@ -140,12 +140,12 @@ SetCheckpoint(8)
       the stop button. The checkpoints that had not yet been
       reached come back as [3040][n] — discarded. Show that the
       host is never left waiting on something that will not
-      arrive. Integrators care about this more than about speed.
+      arrive.
 
-   3. Ask how they currently know a robot has finished a move.
+   3. Ask how you currently know a robot has finished a move.
       If the answer involves a timer, you have found a real
       problem worth solving.
 
-   NEXT   intermediate/01_world_reference_frame.mxprog — making
+   NEXT   02_intermediate/01_world_reference_frame.mxprog — making
           coordinates mean something to the application.
    --------------------------------------------------------------- */

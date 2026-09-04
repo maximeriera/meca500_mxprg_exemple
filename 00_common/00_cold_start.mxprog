@@ -4,8 +4,8 @@
    ROBOT     Meca500 only (R3 or R4)
    PURPOSE   Wipe every leftover setting, so a demo behaves the
              same on a robot someone else has been fiddling with
-   SAVE AS   lib/cold_start
-   CALL      StartProgram("lib/cold_start")
+   SAVE AS   00_common/00_cold_start
+   CALL      StartProgram("00_common/00_cold_start")
    NEEDS     Robot powered on, connected in CONTROL mode
    MOVES     Nothing. See the note on homing below.
    TIME      ~10 s
@@ -14,13 +14,13 @@
 /* ---------------------------------------------------------------
    THE PROBLEM
 
-   You arrive at a customer site. The robot on the bench was last
-   used by someone else. Did they leave a tool frame defined? A
-   restricted joint limit? A work zone? Simulation mode on?
+   The robot on the bench was last used by someone else.
+   Did they leave a tool frame defined? A restricted joint limit?
+   A work zone? Simulation mode on?
 
    Any one of those makes your demo behave differently from the
    way it behaved when you rehearsed it, and you will not know
-   why while a customer is watching.
+   why whitout checking.
 
    THE TWO KINDS OF SETTING
 
@@ -46,12 +46,20 @@
 
    THE HAPPY ACCIDENT
 
-   Every persistent setting can only be changed while the robot
-   is DEACTIVATED. Which means the deactivate step you need
-   anyway is exactly the window in which you can fix them. That
-   is why this program is shaped the way it is.
+   Every persistent setting that affects MOTION can only be
+   changed while the robot is DEACTIVATED. Which means the
+   deactivate step you need anyway is exactly the window in which
+   you can fix them. That is why this program is shaped the way
+   it is.
 
-   ® DOES THIS MOVE THE ROBOT?
+   (The rest of the thirteen are network and identity settings
+   with looser rules — EnableEtherNetIp and EnableProfinet run in
+   any state, SetNetworkOptions is queued, and
+   SetOfflineProgramLoop only works while a program is being
+   saved with StartSaving. None affect motion, and this program
+   leaves all of them alone.)
+
+   DOES THIS MOVE THE ROBOT?
 
    No. Deactivating a Meca500 that was already homed and then
    reactivating it does not require homing again, so the arm does
@@ -62,7 +70,7 @@
    homes — the robot itself still does not move. Make sure the
    fingers are clear.
 
-   (This is unlike basic/01, which calls Home() on a robot that
+   (This is unlike 01_basic/01, which calls Home() on a robot that
    may never have been homed since power-on. That one does move.)
    --------------------------------------------------------------- */
 
@@ -104,7 +112,7 @@ GetStatusRobot()            // activated? homed? in error? in sim mode?
    If all of those read as GOOD, you do not need Part 3 at all —
    Part 2 alone will give you a clean robot.
 
-   Á CHECK GetProductType FIRST. This repo is written for the
+   /!\ CHECK GetProductType FIRST. This repo is written for the
      Meca500 and nothing else. Every example assumes six-axis
      geometry — six-value joint sets, the Meca500's joint limits,
      three-parameter posture configuration. On any other
@@ -140,7 +148,7 @@ DeactivateRobot()
    PART 3 — PERSISTENT SETTINGS  (opt-in; read the warning)
    ============================================================
 
-   Á WARNING — DO NOT UNCOMMENT THIS ON A CUSTOMER'S PRODUCTION
+   /!\ WARNING — DO NOT UNCOMMENT THIS ON A CUSTOMER'S PRODUCTION
      ROBOT WITHOUT ASKING.
 
      These lines return the persistent settings to their FACTORY
@@ -231,11 +239,11 @@ ResumeMotion()
    default, and a real cell has a tool frame.
 
    So finish by applying the house settings. Save
-   common/init.mxprog as "lib/init" first, or comment this out. */
+   common/init.mxprog as "00_common/01_init" first, or comment this out. */
 
-StartProgram("lib/init")
+StartProgram("00_common/01_init")
 
-LogTrace("lib/cold_start complete")
+LogTrace("00_common/00_cold_start complete")
 SetCheckpoint(99)
 
 
@@ -253,7 +261,7 @@ SetCheckpoint(99)
    uncommented. Ten seconds, and the robot is in a state you can
    predict.
 
-   ® ONE THING TO VERIFY ON HARDWARE
+   /!\ ONE THING TO VERIFY ON HARDWARE
 
    Deactivating from inside a running program is legal — the
    commands allow it, and every usage restriction here is

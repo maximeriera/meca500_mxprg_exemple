@@ -4,9 +4,9 @@
    ROBOT     Meca500 only (R3 or R4)
    PURPOSE   Call this at the start of every program, so nothing
              depends on what the previous program left behind
-   SAVE AS   lib/init      (on the robot, via the MecaPortal)
-   CALL      StartProgram("lib/init")
-   NEEDS     Robot activated + homed (see basic/01)
+   SAVE AS   00_common/01_init      (on the robot, via the MecaPortal)
+   CALL      StartProgram("00_common/01_init")
+   NEEDS     Robot activated + homed (see 01_basic/01)
    MOVES     Nothing. Settings only.
    ============================================================== */
 
@@ -27,7 +27,7 @@
 
    One line at the top of every program removes that entirely:
 
-       StartProgram("lib/init")
+       StartProgram("00_common/01_init")
 
    THE PART THAT CATCHES PEOPLE OUT
 
@@ -46,10 +46,10 @@
    1. Open this file in the MecaPortal code editor.
    2. Change the values below to suit your cell — particularly
       SetTrf, which is wrong for every real tool.
-   3. Save it on the robot as "lib/init". The slash creates the
+   3. Save it on the robot as "00_common/01_init". The slash creates the
       folder. Names are case sensitive, up to 63 characters,
       letters, digits and underscores.
-   4. Put StartProgram("lib/init") at the top of every program.
+   4. Put StartProgram("00_common/01_init") at the top of every program.
 
    WHY THIS FILE HAS NO DEACTIVATE/REACTIVATE BLOCK
 
@@ -84,7 +84,7 @@
    the robot's own base (the BRF), which is the right neutral
    starting point. A program that works in a fixture frame should
    set its own SetWrf AFTER calling this file.
-   See intermediate/01_world_reference_frame.mxprog. */
+   See 02_intermediate/01_world_reference_frame.mxprog. */
 SetWrf(0, 0, 0, 0, 0, 0)
 
 /* TRF — where the tool tip is, measured from the flange. Zeros
@@ -94,7 +94,7 @@ SetWrf(0, 0, 0, 0, 0, 0)
    bare flange. With any real tool fitted, every pose in every
    program is wrong until this is right. For a Mecademic MEGP 25E
    the offset is published; for anything else, measure it.
-   See intermediate/02_tool_reference_frame.mxprog. */
+   See 02_intermediate/02_tool_reference_frame.mxprog. */
 SetTrf(0, 0, 0, 0, 0, 0)
 
 
@@ -109,7 +109,7 @@ SetTrf(0, 0, 0, 0, 0, 0)
    because the choice depends on where the robot happened to
    start. Comment out the two lines below and uncomment SetConf
    to make every cycle identical.
-   See intermediate/04 and intermediate/05. */
+   See 02_intermediate/04 and 02_intermediate/05. */
 SetAutoConf(1)
 SetAutoConfTurn(1)
 
@@ -133,7 +133,7 @@ SetJointAcc(100)
    units: mm/s and deg/s. Firmware default for linear velocity is
    150 mm/s. Set both, because a move that translates and
    reorients at once is governed by whichever is binding.
-   See basic/06_linear_motion_settings.mxprog. */
+   See 01_basic/06_linear_motion_settings.mxprog. */
 SetCartLinVel(150)
 SetCartAngVel(90)
 
@@ -146,7 +146,7 @@ SetCartAngVel(90)
 /* Velocity-based mode: the speeds above govern, and durations
    fall out of them. The alternative is time-based mode, where
    you specify how long each move should take.
-   See advanced/06_time_based_motion.mxprog. */
+   See 03_advanced/06_time_based_motion.mxprog. */
 SetMoveMode(0)
 
 
@@ -159,7 +159,7 @@ SetMoveMode(0)
 
    Individual programs should still drop to SetBlending(0) around
    points where the tool actually has to arrive.
-   See intermediate/06_blending.mxprog. */
+   See 02_intermediate/06_blending.mxprog. */
 SetBlending(100)
 
 
@@ -173,7 +173,7 @@ SetBlending(100)
    available and it is routinely skipped. Programs that pick up a
    part should raise it while carrying and drop it again after
    placing.
-   See advanced/05_payload_and_torque_limits.mxprog. */
+   See 03_advanced/05_payload_and_torque_limits.mxprog. */
 SetPayload(0, 0, 0, 0)
 
 
@@ -200,13 +200,13 @@ SetTorqueLimitsCfg(0, 2)
 /* A line in the robot log saying initialisation finished. When
    you are reading a log after the fact, knowing exactly where
    each cycle began is worth the one command. */
-LogTrace("lib/init complete")
+LogTrace("00_common/01_init complete")
 
 /* A checkpoint the host can wait on, so a PLC or Python program
    knows initialisation is done before it issues real work.
    Number 100 is reserved for this across the repo — keep your
    program's own checkpoints below it.
-   See basic/07_delay_and_sequencing.mxprog. */
+   See 01_basic/07_delay_and_sequencing.mxprog. */
 SetCheckpoint(100)
 
 
@@ -218,18 +218,18 @@ SetCheckpoint(100)
    so save this file before putting the call anywhere.
 
    The settings above are motion commands, so they enter the
-   motion queue in order. Placing StartProgram("lib/init") at the
+   motion queue in order. Placing StartProgram("00_common/01_init") at the
    TOP of a program therefore means these settings are applied
    before that program's own moves, which is exactly what you
    want. A program that needs its own frame or speed simply sets
    it after the call, overriding what is here.
 
-   TRY THIS IN FRONT OF A CUSTOMER
+   THINGS TO TRY
 
    1. Run intermediate/06_blending.mxprog, which deliberately
       leaves blending part-way through its demo. Then run a
       pick-and-place and watch it behave differently than
-      expected. Then add StartProgram("lib/init") at the top and
+      expected. Then add StartProgram("00_common/01_init") at the top and
       run again. This is a concrete, thirty-second demonstration
       of why cells become flaky, and how one line fixes it.
 

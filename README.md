@@ -1,8 +1,76 @@
-# Mecademic `.mxprog` Examples
+# Meca500 `.mxprog` Examples
 
-Annotated, ready-to-run example programs for the **Meca500** — and the Meca500 only — written as training and demo material for the sales team.
+Annotated, ready-to-run example programs for the **Mecademic Meca500** — and the Meca500 only.
 
-Every example is written to be **read as much as run**. The comments are the product: they explain *what* a command does, *why* you would choose it over the alternative, and *what the customer should see happen*. A rep should be able to open any file, read it top to bottom, and be able to explain that feature on a call without a robot in front of them.
+Every example is written to be **read as much as run**. The comments are the point: they explain *what* a command does, *why* you would choose it over the alternative, and *what you should see happen*. You should be able to open any file, read it top to bottom, and understand that feature without a robot in front of you.
+
+Two audiences, one set of files:
+
+- **Learning the robot?** Start at `01_basic/01` and read in order. By the end of `01_basic/` you can write your own programs; by the end of `03_advanced/` you can design a cell around one.
+- **Demonstrating the robot?** Each file is self-contained and ends with concrete things to try, along with the question that feature answers.
+
+> [!IMPORTANT]
+> This is a collection of examples, not Mecademic product documentation.
+> The authoritative reference is always the [Programming Manual](https://resources.mecademic.com/en/doc/MC-PM-MECA500/latest/).
+> See [Status and licence](#status-and-licence).
+
+## Contents
+
+- [Meca500 `.mxprog` Examples](#meca500-mxprog-examples)
+  - [Contents](#contents)
+  - [Safety first](#safety-first)
+  - [What you need](#what-you-need)
+  - [What is an `.mxprog` file?](#what-is-an-mxprog-file)
+    - [Comments](#comments)
+    - [Where else these files come from](#where-else-these-files-come-from)
+  - [What the command interface does *not* have](#what-the-command-interface-does-not-have)
+  - [Conventions used in these examples](#conventions-used-in-these-examples)
+  - [Folder structure](#folder-structure)
+  - [The three setup programs](#the-three-setup-programs)
+  - [Persistent vs. non-persistent settings](#persistent-vs-non-persistent-settings)
+  - [File index](#file-index)
+  - [Running an example](#running-an-example)
+    - [Run it in simulation first](#run-it-in-simulation-first)
+    - [If something goes wrong](#if-something-goes-wrong)
+  - [Target hardware and firmware](#target-hardware-and-firmware)
+  - [Status and licence](#status-and-licence)
+  - [Official Mecademic resources](#official-mecademic-resources)
+
+---
+
+## Safety first
+
+**These programs move a real robot.** Read this section before running anything.
+
+- **Clear the workspace.** Every example opens by homing the robot. On a robot that has not been
+  homed since power-on, that moves every joint through a large motion.
+- **Run in simulation first** on any setup you have not tested. `ActivateSim(1)` executes
+  everything with the motors doing nothing — see [Run it in simulation first](#run-it-in-simulation-first).
+- **Check the poses against your cell.** The coordinates here assume a **bare flange and an
+  empty workspace**. A tool, a fixture, or a part changes what is reachable and what collides.
+  Nothing in this repo knows about your fixture.
+- **Start slow.** Examples run at reduced speed on purpose. Raise the speed only once you have
+  watched the path.
+- **`00_common/00_cold_start.mxprog` can reset your safety envelope.** Its factory-reset section is
+  commented out for exactly this reason. On a robot in a working cell, the work zone, joint
+  limits and tool sphere may be deliberate protection — read the audit output before changing
+  anything.
+
+These examples are a learning aid. They are **not** a substitute for the risk assessment,
+guarding and safety design your installation requires. You are responsible for the safety of
+your own cell.
+
+---
+
+## What you need
+
+- A **Meca500** (R3 or R4) on firmware **11.x**, ideally 11.3.
+- A network connection to it. The robot's default address is `192.168.0.100`.
+- A web browser, for the **MecaPortal** — the robot's built-in web interface. Nothing to
+  install.
+- That is all. There is no SDK, toolchain or licence needed to run these files.
+
+Optional, and only for `03_intermediate/07`: an **MEGP 25E** or **MEGP 25LS** gripper.
 
 ---
 
@@ -10,7 +78,7 @@ Every example is written to be **read as much as run**. The comments are the pro
 
 An `.mxprog` file is a **plain-text program** saved from the MecaPortal code editor. It is a sequence of the robot's own text commands — the same commands documented in the [Programming Manual](https://resources.mecademic.com/en/doc/MC-PM-MECA500/latest/) — one per line.
 
-There is no separate programming language. What you type in the code editor is exactly what gets sent to the robot over TCP/IP.
+There is no separate programming language and no compilation. What you type in the code editor is exactly what gets sent to the robot over TCP/IP.
 
 ```
 // Move to the pick approach position
@@ -18,37 +86,11 @@ SetJointVel(25)
 MoveJoints(0, -20, 30, 0, 40, 0)
 ```
 
-### Where else these files come from
-
-Not every `.mxprog` a rep sees will be hand-written. **RoboDK** exports to this format, and its output is recognisable: a generated header comment, whole-line comments carrying the original target names, and `StartProgram(1)` style integer program names rather than strings. It also emits comments where a movement could not be translated — for example, that linear movement using joint targets is not supported. Worth knowing, because a customer may arrive with a RoboDK-generated file and ask why it looks nothing like these examples.
-
-### What the robot command interface does *not* have
-
-This is the single most important thing to understand before writing examples, and the question a rep will get asked most often:
-
-> The robot's command interface does **not** support conditionals, loops, or other flow
-> control statements.
-
-There is no `IF`, no `WHILE`, no `FOR`, no jumps or labels. An `.mxprog` program is a **linear sequence of commands**, executed in order.
-
-That is a deliberate design choice, not a limitation to apologize for. Mecademic robots are components meant to be driven by a PC, IPC or PLC that already owns the application logic. The honest framing for a customer is:
-
-- **Program logic lives in the host** — Python, C#, C/C++, Java, or Structured Text on a PLC.
-  The host holds the state machine, the vision result, the recipe, the error handling.
-- **The robot holds the motion** — the trajectories, frames, speeds and blending.
-- `.mxprog` programs are the reusable motion building blocks the host calls into.
-
-The three tools that give you structure without flow control:
-
-| Need | Mechanism |
-|---|---|
-| Reuse / modularity | `StartProgram("folder/program_name")` calls another saved program |
-| Parameterised motion | Robot variables (beta): `MovePose(*vars.myGroup.pickPose)` |
-| Application logic | The host program over TCP/IP, EtherCAT, EtherNet/IP or PROFINET |
+Command names are **case-insensitive**, so `SetWrf`, `SetWRF` and `setwrf` all reach the same command. These examples use the manual's spelling throughout.
 
 ### Comments
 
-Comments are **C/C++ style**, and they are the whole point of this repo:
+Comments are **C/C++ style**, and they are most of what this repo is:
 
 ```
 // A single-line comment
@@ -58,6 +100,38 @@ Comments are **C/C++ style**, and they are the whole point of this repo:
 ```
 
 `Ctrl` + `/` toggles comments on the selected lines in the MecaPortal editor.
+
+### Where else these files come from
+
+Not every `.mxprog` is hand-written. **RoboDK** exports to this format, and its output is recognisable: a generated header comment, whole-line comments carrying the original target names, and integer program names like `StartProgram(1)` rather than strings. It also emits comments where a movement could not be translated — for example, that linear movement using joint targets is not supported. Worth knowing if you meet a generated file and wonder why it looks nothing like these examples.
+
+---
+
+## What the command interface does *not* have
+
+This is the single most important thing to understand before writing a program, and the most common surprise:
+
+> The robot's command interface does **not** support conditionals, loops, or other flow control statements.
+
+There is no `IF`, no `WHILE`, no `FOR`, no jumps or labels. An `.mxprog` program is a **linear sequence of commands**, executed in order.
+
+That is a deliberate design choice. A Meca500 is a precision motion component intended to be driven by a PC, IPC or PLC that already owns the application logic:
+
+- **Program logic lives in the host** — Python, C#, C/C++, Java, or Structured Text on a PLC. The host holds the state machine, the vision result, the recipe, the error handling.
+- **The robot holds the motion** — the trajectories, frames, speeds and blending.
+- `.mxprog` programs are the reusable motion building blocks the host calls into.
+
+In practice this works well: the logic stays in a language you already have an IDE, a debugger, tests and version control for, and the motion stays in small named programs you can test one at a time. The trade-off is real, though — if you want the robot itself to branch on a sensor, it cannot, and the host has to.
+
+The three tools that give you structure without flow control:
+
+| Need | Mechanism |
+|---|---|
+| Reuse / modularity | `StartProgram("folder/program_name")` calls another saved program |
+| Parameterised motion | Robot variables (beta): `MovePose(*vars.myGroup.pickPose)` |
+| Application logic | The host program over TCP/IP, EtherCAT, EtherNet/IP or PROFINET |
+
+`02_advanced/02_program_calls.mxprog` works through the architecture this implies.
 
 ---
 
@@ -75,42 +149,51 @@ ResetError()
 ResumeMotion()
 ```
 
-Deactivating loses every non-persistent setting, so each example starts from firmware defaults regardless of what ran before it. That is the point: the file behaves the same on your bench and on a robot someone else used last. It does **not** move the arm — a robot that was already homed needs no re-homing on reactivation.
+Deactivating loses every non-persistent setting, so each example starts from firmware defaults regardless of what ran before it. That is the point: the file behaves the same on your bench as on a robot someone else used last. On an already-homed robot it does **not** move the arm — reactivation does not require re-homing.
 
-`01_basic/01_first_program.mxprog` explains all five commands line by line and is the one to run first on a robot fresh from power-on. Note that on such a robot it **homes for the first time, which moves every joint** — clear the area before running it.
+`01_basic/01_first_program.mxprog` explains all five commands line by line and is the one to run first on a robot fresh from power-on. On such a robot it **homes for the first time, which moves every joint** — clear the area.
 
-Two things this block does not do, both covered under [Persistent vs. non-persistent](#persistent-vs-non-persistent):
+Two things this block does not do:
 
-- It does not reset **persistent** settings. Use `00_common/cold_start.mxprog` for those.
+- It does not reset **persistent** settings — see [Persistent vs. non-persistent](#persistent-vs-non-persistent-settings). Use `00_common/00_cold_start.mxprog` for those.
 - With an **MEGP 25\*** gripper fitted, every reactivation re-homes the gripper, so the fingers move on each run. The robot still does not.
 
-`00_common/init.mxprog` deliberately has **no** reset block — it is called from inside another program's flow, and a deactivate there would tear down the state its caller just built.
+`00_common/01_init.mxprog` deliberately has **no** reset block — it is called from inside another program's flow, and a deactivate there would tear down the state its caller just built.
 
-**To remove the reset from every example**, the block is byte-identical in all of them and always ends with `ResumeMotion()`. Delete from the `/* --- Standard reset` line through `ResumeMotion()` — one find-and-replace across the repo, or:
+<details>
+<summary><b>To remove the reset block from every example</b></summary>
+
+The block is byte-identical in all of them and always ends with `ResumeMotion()`. Delete from the `/* --- Standard reset` line through `ResumeMotion()` — one find-and-replace across the repo, or:
 
 ```bash
 perl -0pi -e 's{/\* --- Standard reset.*?\nResumeMotion\(\)\n\n}{}s' */*.mxprog
 ```
 
-That leaves `01_basic/01` untouched, which is correct — its copy is the teaching one, explained command by command, and is not the shared block.
+That leaves `basic/01` untouched, which is correct — its copy is the teaching one, explained command by command, and is not the shared block.
 
-**Header block** — every example opens with a block comment stating what it teaches, what it needs, and what you should watch for:
+</details>
+
+**Header block** — every example opens with a block comment stating what it is for, what it needs, and what to watch:
 
 ```
 /* ============================================================
    02 — MoveJoints: the joint-space move
    ------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
    TEACHES   What a joint move is and when to reach for it
    NEEDS     Robot activated + homed, no tool
    WATCH     All six joints start and stop together
    ============================================================ */
 ```
 
-**Speeds** — examples run slow on purpose (typically 10–25%) so a demo is legible and safe to stand next to. Every example says where to change the speed.
+**Speeds** — examples run slow on purpose (typically 10–25%) so the motion is legible and safe
+to stand next to. Every example says where to change the speed.
 
-**Return to a known position** — examples end where they started, so you can run one after another, or the same one twice, without re-jogging the robot.
+**Return to a known position** — examples end where they started, so you can run one after
+another, or the same one twice, without re-jogging the robot.
 
-**Reachability** — all poses are chosen well inside the Meca500 workspace and away from singularities, so an example does not fail on a customer's desk. The Meca500's mechanical joint limits are:
+**Reachability** — all poses sit well inside the Meca500 workspace and away from singularities.
+The Meca500's mechanical joint limits are:
 
 | Joint | Range |
 |---|---|
@@ -134,39 +217,40 @@ Examples are organised by **level**, and numbered so the reading order is the te
 03_advanced/       How it goes into a real cell. Composition, variables, safety.
 ```
 
-Read `01_basic/` in order and you have the vocabulary for a discovery call. 
-Read `02_intermediate/` and you can run a demo. 
-Read `03_advanced/` and you can answer an integrator's questions.
+Read `01_basic/` in order and you have the vocabulary.
+Read `02_intermediate/` and you can build something useful.
+Read `03_advanced/` and you can design a cell and answer an integrator's questions about it.
 
-### Three things to run before anything else
+---
 
-**`basic/01_first_program.mxprog`** takes the robot from powered-on to ready for motion:
-`ActivateRobot()`, `Home()`, `ResetError()`, `ResumeMotion()`. All four are idempotent — none fails if the robot is already in the state it asks for — so the block is safe at the top of any program regardless of what state the robot was left in.
+## The three setup programs
 
-**`common/init.mxprog`** puts the *settings* in a known state: frames, posture selection, speeds, blending, move mode, payload, torque limits. Save it on the robot as `lib/init`, then open every program with:
+**`01_basic/01_first_program.mxprog`** takes the robot from powered-on to ready for motion: `DeactivateRobot()`, `ActivateRobot()`, `Home()`, `ResetError()`, `ResumeMotion()`. The last four are idempotent — none fails if the robot is already in the state it asks for.
+
+**`00_common/01_init.mxprog`** puts the *settings* in a known state: frames, posture selection, speeds, blending, move mode, payload, torque limits. Save it on the robot as `00_common/01_init`,
+then open your own programs with:
 
 ```
-StartProgram("lib/init")
+StartProgram("00_common/01_init")
 ```
 
-**`common/cold_start.mxprog`** is the one to reach for on a robot you do not know — a loaner, a customer's bench, anything someone else used last. It **deactivates and reactivates**, which wipes every non-persistent setting back to firmware defaults in one stroke, then audits the persistent ones that deactivation cannot touch.
-
-The distinction between these three is worth keeping straight:
+**`00_common/00_cold_start.mxprog`** is for a robot you do not know — a loaner, a shared bench, anything someone else used last. It **audits** the persistent settings, then deactivates and reactivates to wipe every non-persistent one back to firmware defaults.
 
 | | Scope | When |
 |---|---|---|
-| `basic/01` | Robot **state** — activate, home, clear fault | Once per power-up |
-| `common/init` | **Non-persistent settings** — frames, speeds, blending | Start of every program |
-| `common/cold_start` | Both, **plus** an audit of persistent settings | On an unfamiliar robot |
+| `01_basic/01_first_program` | Robot **state** — activate, home, clear fault | Once per power-up |
+| `00_common/01_init` | **Non-persistent settings** — frames, speeds, blending | Start of every program |
+| `00_common/00_cold_start` | Both, **plus** an audit of persistent settings | On an unfamiliar robot |
 
 Settings are sticky, and they only reset **on activation**. A robot that stays activated all day never gets that reset, so between two runs the only thing that restores them is you — either explicitly (`init`) or by cycling activation (`cold_start`).
 
-<a name="persistent-vs-non-persistent"></a>
-#### Persistent vs. non-persistent
+---
 
-This is the distinction that decides what a reset can actually fix.
+## Persistent vs. non-persistent settings
 
-**Non-persistent** settings live only as long as the robot is activated: TRF, WRF, speeds, blending, payload, torque limits, posture and turn selection, move mode. Deactivating loses all of them — which is what makes `cold_start` work, and it does **not** move the arm, because a robot that was already homed does not need homing again on reactivation. (With an MEGP 25\* gripper fitted, the gripper re-homes; the robot still does not move.)
+This is the distinction that decides what a reset can actually fix, and it is worth knowing before you debug a robot that is "behaving strangely".
+
+**Non-persistent** settings live only as long as the robot is activated: TRF, WRF, speeds, blending, payload, torque limits, posture and turn selection, move mode. Deactivating loses all of them — which is what makes the standard reset block work, and why it does not move the arm.
 
 **Persistent** settings are written to the robot's SD card and survive deactivation, reboots and power cycles. Only thirteen commands set them, and **deactivating does nothing to them** — they have to be dealt with deliberately. The ones that change how motion behaves:
 
@@ -179,17 +263,26 @@ This is the distinction that decides what a reset can actually fix.
 | `SetCalibrationCfg` | `1`, enabled | disabled means Cartesian accuracy quietly misses the datasheet |
 | `SetSimModeCfg` | `1`, normal | decides which mode `ActivateSim()` picks |
 
-All thirteen can **only be set while the robot is deactivated** — a running program must not be able to widen its own safety envelope. That restriction is also the opportunity: the deactivate step `cold_start` needs anyway is exactly the window in which they can be corrected.
+The table above covers eight of the thirteen. The remaining five are `SetRobotName`, `SetNetworkOptions`, `EnableEtherNetIp`, `EnableProfinet` and `SetOfflineProgramLoop` — the robot's identity, how it is wired into your network, and whether the button on its base loops program `1`. `cold_start` deliberately leaves all five alone: resetting them would take the robot off the network. (`SetOfflineProgramLoop` could not go there anyway — the robot only accepts it while a program is being saved with `StartSaving`.)
 
-`cold_start` leaves the factory-reset lines **commented out on purpose**. On a demo robot, uncomment them. On a customer's production robot several of them are a safety envelope somebody configured deliberately — run the audit, show them the output, and let them decide.
+**Every one of the eight in the table can only be set while the robot is deactivated** — a running program must not be able to widen its own safety envelope. That restriction is also the opportunity: the deactivate step `cold_start` needs anyway is exactly the window in which they can be corrected.
 
-### Contents
+(The other five vary. `SetRobotName` is also deactivated-only; `EnableEtherNetIp` and `EnableProfinet` run in any state; `SetNetworkOptions` is a queued command needing the robot ready for motion; and `SetOfflineProgramLoop` only works while a program is being saved with `StartSaving`. None of them affect motion, and `cold_start` touches none of them.)
 
-**`basic/` — the vocabulary**
+> [!WARNING]
+> `cold_start` leaves the factory-reset lines **commented out on purpose**.
+> On a bare demo robot, uncomment them. On a robot in a working cell, several of them may be a safety envelope somebody
+> configured deliberately — run the audit, look at the output, and decide before you change anything.
+
+---
+
+## File index
+
+**`01_basic/` — the vocabulary**
 
 | File | Teaches |
 |---|---|
-| `01_first_program.mxprog` | Readiness: `ActivateRobot`, `Home`, `ResetError`, `ResumeMotion` — plus program anatomy and the motion queue |
+| `01_first_program.mxprog` | Readiness: `DeactivateRobot`, `ActivateRobot`, `Home`, `ResetError`, `ResumeMotion` — plus program anatomy and the motion queue |
 | `02_move_joints.mxprog` | Joint-space motion — `MoveJoints` |
 | `03_move_pose.mxprog` | Cartesian target, joint-space path — `MovePose` |
 | `04_move_lin.mxprog` | Straight-line motion — `MoveLin`, and why it is *not* the default |
@@ -197,7 +290,7 @@ All thirteen can **only be set while the robot is deactivated** — a running pr
 | `06_linear_motion_settings.mxprog` | `SetCartLinVel`, `SetCartAngVel`, `SetCartAcc` — tuning in mm/s |
 | `07_delay_and_sequencing.mxprog` | `Delay`, `SetCheckpoint`, and what "finished" actually means |
 
-**`intermediate/` — making it useful**
+**`02_intermediate/` — making it useful**
 
 | File | Teaches |
 |---|---|
@@ -209,49 +302,45 @@ All thirteen can **only be set while the robot is deactivated** — a running pr
 | `06_blending.mxprog` | `SetBlending` — cycle time you get for free |
 | `07_gripper.mxprog` | `GripperOpen`/`Close`, `MoveGripper`, force, and the parallel-execution trap |
 
-**`advanced/` — into a real cell**
+**`03_advanced/` — into a real cell**
 
 | File | Teaches |
 |---|---|
 | `01_variables.mxprog` | Robot variables (beta): `CreateVariable`, `vars.` and `*vars.` |
 | `02_program_calls.mxprog` | `StartProgram` — composition, and how to architect a cell |
-| `03_pick_and_place.mxprog` | The full demo, assembled from everything above |
+| `03_pick_and_place.mxprog` | A full cycle, assembled from everything above |
 | `04_work_zone_and_collision.mxprog` | `SetWorkZoneLimits`, `SetToolSphere`, `SetCollisionCfg` |
 | `05_payload_and_torque_limits.mxprog` | `SetPayload`, `SetTorqueLimits` — accuracy and process guarding |
 | `06_time_based_motion.mxprog` | `SetMoveMode`, `SetMoveDuration` — moving on a fixed beat |
 
-**`common/` — helpers**
+**`00_common/` — helpers**
 
 | File | Purpose |
 |---|---|
-| `init.mxprog` | Save as `lib/init`; call with `StartProgram("lib/init")` at the top of every program |
-| `cold_start.mxprog` | Save as `lib/cold_start`; deactivate/reactivate reset plus a persistent-settings audit |
+| `00_cold_start.mxprog` | Save as `00_common/00_cold_start`; persistent-settings audit plus a deactivate/reactivate reset |
+| `01_init.mxprog` | Save as `00_common/01_init`; call with `StartProgram("00_common/01_init")` at the top of every program |
 
-Two files are mostly prose, because the commands they cover cannot go in a running program:
-`advanced/04` (work zone and collision settings require the robot to be **deactivated**) and
-parts of `advanced/02` (which needs sub-programs saved on the robot first). Both say so at
-the top and both still have a runnable section.
 
-Every file ends with a **TRY THIS IN FRONT OF A CUSTOMER** block: two or three concrete
-things to do with the robot, and the question that feature is the answer to.
+Two files are mostly prose, because the commands they cover cannot go in a running program: `03_advanced/04_work_zone_and_collision` (work zone and collision settings require the robot to be **deactivated**) and parts of `03_advanced/02_program_calls` (which needs sub-programs saved on the robot first). Both say so at the top and both still have a runnable section.
+
+Every file ends with a **THINGS TO TRY** block — two or three concrete exercises with the robot, and the question that feature answers. They are the fastest way to make a concept stick, whether you are learning the robot or showing it to someone else.
 
 ---
 
 ## Running an example
 
-1. Open the MecaPortal and connect to the robot **in control mode** (you cannot save or run
-   programs from monitoring mode).
-2. **Activate** and **home** the robot.
-3. Load the `.mxprog` file into the code editor with the *load from computer* icon.
-4. Read the header block. Check the preconditions actually match your setup.
-5. Press **run**, or select a few lines and press `Ctrl` + `Enter` to run only those — this
-   is the best way to demo a single command.
+1. Open the MecaPortal and connect to the robot **in control mode** — you cannot save or run programs from monitoring mode.
+2. Load the `.mxprog` file into the code editor with the *load from computer* icon.
+3. **Read the header block.** Check the preconditions match your setup, and that the poses are clear of anything you have mounted.
+4. Press **run** — or select a few lines and press `Ctrl` + `Enter` to run only those, which is the best way to study one command at a time.
 
-To keep a program on the robot, save it: program and folder names are case-sensitive, max 63 characters, from `A–Z a–z 0–9 _ .` — and a `/` in the name creates a folder, which is how `StartProgram("demo/pick_and_place")` finds its target.
+You do not need to activate or home first: every example does that itself.
+
+To keep a program on the robot, save it. Program and folder names are case-sensitive, max 63 characters, from letters, digits and underscores — and a `/` in the name creates a folder, which is how `StartProgram("00_common/01_init")` finds its target.
 
 ### Run it in simulation first
 
-Every example here is written to be safe on a bare robot, but poses that are fine on one setup can collide with a fixture on another. Before running an unfamiliar program on real hardware, deactivate the robot and enable **simulation mode**:
+Every example is written to be safe on a bare robot, but poses that are fine on one setup can collide with a fixture on another. Before running an unfamiliar program on real hardware, deactivate the robot and enable **simulation mode**:
 
 ```
 ActivateSim(1)
@@ -259,11 +348,19 @@ ActivateSim(1)
 
 The robot then executes everything — the 3D view moves, the log fills, errors and work-zone breaches are reported — with the motors doing nothing. `ActivateSim(2)` runs the same thing as fast as possible, which is the quickest way to check a long program for errors. `DeactivateSim()` returns to real motion. Both can only be issued while the robot is deactivated.
 
-This is also a good demo in itself: a rep with no robot in the bag can still run the whole example set on a customer's own robot, or on a loaner, without touching anything.
-
 ### If something goes wrong
 
 The robot validates syntax **on save**, not as you type — a red dot on the tab and a red marker on the offending line means the robot rejected it. A motion error turns the run button red; click it (or *Reset error*) to send `ResetError`, then press resume to send `ResumeMotion`.
+
+Common responses you will meet:
+
+| Code | Meaning |
+|---|---|
+| `[1005]` | The robot is not activated |
+| `[1006]` | The robot is not homed |
+| `[1011]` | The robot is already in error |
+| `[1032]` | Homing failed because joints are outside limits |
+| `[3017]` | No offline program saved — `StartProgram` could not find its target |
 
 ---
 
@@ -277,9 +374,46 @@ The firmware target is **11.3**. The examples are accurate across the 11.x famil
 
 ---
 
-## Sources
+## Status and licence
 
-- [Programming Manual — MC-PM-MECA500](https://resources.mecademic.com/en/doc/MC-PM-MECA500/latest/)
-- [MecaPortal Operator Manual — MC-OM-MECA500](https://resources.mecademic.com/en/doc/MC-OM-MECA500/latest/)
-- [Mecademic technical resources](https://resources.mecademic.com/en/index.html)
-- [mecademicpy — the Python API](https://github.com/Mecademic/mecademicpy)
+**Licence: [MIT](LICENSE).** Copy these programs into your own projects, modify them, ship them. Attribution is appreciated but the licence only asks that you keep the copyright notice with substantial copies.
+
+**Disclaimer.** This is a collection of examples. It is not Mecademic product documentation, it carries no warranty, and it is not a substitute for the official manuals or for Mecademic support. Where this repo and the Programming Manual disagree, the manual is right and this repo has a bug — please report it.
+
+Note the warranty disclaimer in the licence is not boilerplate here: these files command a real robot, and what is safe on a bare arm on a bench may not be safe in your cell. Read [Safety first](#safety-first).
+
+**Firmware drift.** These files were written against firmware 11.3. Commands, defaults and the MecaPortal UI change between firmware versions. If something here does not match your robot, check the manual for your firmware first.
+
+**Found a mistake?** Open an issue. Corrections to the technical content are especially welcome — every claim here is meant to be traceable to the manual.
+
+---
+
+## Official Mecademic resources
+
+Everything in this repo is derived from the documents below. They are the authority; this repo is a study aid. If the two disagree, believe the manual.
+
+**Documentation**
+
+| Resource | What it covers |
+|---|---|
+| [Programming Manual — MC-PM-MECA500](https://resources.mecademic.com/en/doc/MC-PM-MECA500/latest/) | Every command: syntax, arguments, defaults, usage restrictions. The reference these examples were checked against |
+| [MecaPortal Operator Manual — MC-OM-MECA500](https://resources.mecademic.com/en/doc/MC-OM-MECA500/latest/) | The web interface: code editor, program manager, jogging, 3D view |
+| [User Manual — MC-UM-MECA500](https://resources.mecademic.com/en/doc/MC-UM-MECA500/latest/) | Installation, mounting, wiring, specifications, and the safety chapter |
+| [All technical resources](https://resources.mecademic.com/en/index.html) | Documentation hub, all models and firmware versions |
+
+**Software**
+
+| Resource | What it is |
+|---|---|
+| [Firmware downloads](https://resources.mecademic.com/en/firmware/index.html) | Firmware images and release notes |
+| [mecademicpy](https://github.com/Mecademic/mecademicpy) | The official Python API — the natural next step once you need flow control |
+| [Mecademic on GitHub](https://github.com/Mecademic) | Official drivers, APIs and integration examples |
+
+**Support**
+
+| Resource | What it is |
+|---|---|
+| [Knowledge base](https://support.mecademic.com/) | Articles, FAQs and troubleshooting |
+| [mecademic.com](https://www.mecademic.com/) | Products, specifications, and how to contact Mecademic |
+
+Documentation URLs above point at `latest`. To read the manual for a specific firmware version, replace `latest` with the version — for example `.../MC-PM-MECA500/11.1/`.

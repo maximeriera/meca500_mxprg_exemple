@@ -14,9 +14,19 @@ Two audiences, one set of files:
 > The authoritative reference is always the [Programming Manual](https://resources.mecademic.com/en/doc/MC-PM-MECA500/latest/).
 > See [Status and licence](#status-and-licence).
 
+## Who these examples are written for
+
+Someone with **little or no background in robotics or industrial automation** — a newcomer, a
+student, an engineer from another discipline, someone evaluating a Meca500 for the first time.
+
+The goal is that you can read a file top to bottom and come away able to *use* the feature and
+*explain* it to somebody else. That goal shapes every explanation in this repo, and it
+sometimes conflicts with being exhaustively precise.
+
 ## Contents
 
 - [Meca500 `.mxprog` Examples](#meca500-mxprog-examples)
+  - [Who these examples are written for](#who-these-examples-are-written-for)
   - [Contents](#contents)
   - [Safety first](#safety-first)
   - [What you need](#what-you-need)

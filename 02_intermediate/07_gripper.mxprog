@@ -1,0 +1,223 @@
+/* ==============================================================
+   07 — The gripper
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   GripperOpen/Close, MoveGripper, force, speed, and
+             the parallel-execution trap
+   NEEDS     Robot activated + homed, MEGP 25E or 25LS gripper
+             mounted and homed
+   WATCH     The gripper moving WHILE the arm moves
+   TIME      ~30 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   THE COMMANDS
+
+       GripperOpen()          go to the open position
+       GripperClose()         go to the closed position
+       MoveGripper(d)         go to a specific opening, in mm
+       SetGripperForce(p)     grip force, % of max
+       SetGripperVel(p)       finger speed, % of max (default 40)
+       SetGripperRange(c, o)  redefine what open and closed mean
+
+   MoveGripper is the one worth knowing: an electric gripper is
+   not a two-state pneumatic cylinder. You can send the fingers
+   to any opening in millimetres, which means one gripper handles
+   a family of parts, and changeover is a number rather than a
+   hardware swap.
+
+   FORCE IS SOFTWARE
+
+   SetGripperForce sets grip force as a percentage. Low force for
+   something fragile, high force for something heavy, changed
+   between two parts in the same cycle if you like. No regulator,
+   no spring change, no tooling.
+
+   When the fingers meet an object before reaching their target
+   opening, they stop and hold it at the set force, and the
+   gripper reports that it is holding a part. If the part is
+   removed, the fingers continue to the opening that was asked
+   for.
+
+   THE TRAP: GRIPPER COMMANDS RUN IN PARALLEL
+
+   This is the single most important thing on this page, and it
+   surprises everyone.
+
+   Gripper commands are queued like motion commands, but they do
+   not BLOCK. From the manual: a gripper command starts at the
+   beginning of the blending or deceleration phase of the
+   preceding move, and it continues to execute in parallel with
+   subsequent moves, which begin immediately.
+
+   In plain terms: write GripperClose() followed by a move, and
+   the arm starts leaving while the fingers are still closing.
+   On the bench with a light part you may get away with it. With
+   a heavier part, or a faster cycle, you drop it.
+
+   That parallelism is a FEATURE — it is free cycle time when the
+   gripper can close during the approach. But it has to be
+   deliberate.
+
+   To make it deliberate:
+
+     - to have the gripper act only after the arm has stopped,
+       put a Delay before it, or use SetCheckpoint and wait for
+       it in the host
+     - to keep the arm still until the gripper has finished, put
+       a Delay after it, or have the host watch the gripper state
+       with GetRtGripperState
+
+   In a demo program, Delay is fine and readable. In production,
+   the checkpoint and gripper-state route is the correct one,
+   because a Delay is a guess about timing and a checkpoint is a
+   fact.
+
+   BEFORE YOU RUN THIS
+
+   The gripper must be mounted and homed. Without one, the
+   gripper commands error out — run this file only on a robot
+   that has one fitted.
+
+   /!\NOTE ON THE STANDARD RESET BELOW
+
+   This is the one example where the reset is not free. Every
+   reactivation re-homes an MEGP 25* gripper, so the fingers move
+   each time you run this file. The robot itself does not move.
+   Keep the fingers clear, and do not be surprised when the
+   gripper cycles before the program proper starts.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(20)
+SetCartLinVel(60)
+
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* --- Gripper settings -----------------------------------------
+   Moderate force and a gentle speed, for a demo you can stand
+   next to and for parts you do not want to mark. */
+SetGripperVel(30)
+SetGripperForce(40)
+
+GripperOpen()
+Delay(1)
+
+
+/* --- Opening to a dimension ------------------------------------
+   Not open or closed — specific widths in millimetres. This is
+   the sequence that shows an electric gripper is not a cylinder.
+   Watch the fingers stop at each width. */
+MoveGripper(5)
+Delay(1)
+MoveGripper(3)
+Delay(1)
+MoveGripper(1)
+Delay(1)
+GripperOpen()
+Delay(1)
+
+
+/* --- A pick, written safely ------------------------------------
+   Note the Delay after every gripper command. Each one is there
+   to stop the arm moving while the fingers are still travelling.
+   Remove them and this sequence looks fine right up until it
+   drops a part. */
+
+// Approach above the part
+MovePose(190, 0, 290, 0, 90, 0)
+GripperOpen()
+Delay(1)                              // let the fingers finish
+
+// Descend onto it
+MoveLin(190, 0, 250, 0, 90, 0)
+Delay(0.3)                            // let the arm settle
+
+// Close on the part
+GripperClose()
+Delay(1)                              // let the grip complete
+
+// Lift, carry, place
+MoveLinRelTrf(0, 0, -40, 0, 0, 0)
+MovePose(190, 60, 290, 0, 90, 0)
+MoveLin(190, 60, 250, 0, 90, 0)
+Delay(0.3)
+
+GripperOpen()
+Delay(1)                              // let it release before lifting
+
+MoveLinRelTrf(0, 0, -40, 0, 0, 0)
+
+
+/* --- Force, changed mid-cycle ----------------------------------
+   Two grips on the same part at very different forces, one after
+   the other. Nothing mechanical changed between them. This is a
+   good moment to ask what changing grip force costs on a
+   pneumatic tool. */
+
+SetGripperForce(10)                   // gentle
+GripperClose()
+Delay(1.5)
+GripperOpen()
+Delay(1)
+
+SetGripperForce(100)                  // firm
+GripperClose()
+Delay(1.5)
+GripperOpen()
+Delay(1)
+
+
+// --- Leave things tidy ----------------------------------------
+SetGripperForce(40)
+SetGripperVel(40)
+GripperOpen()
+Delay(1)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   THINGS TO TRY
+
+   1. The MoveGripper width sequence is the demo. One gripper,
+      any opening, changed in software. Ask how many gripper
+      variants they currently stock.
+
+   2. The force block is the second demo. Fragile part and heavy
+      part in the same cycle, no hardware change.
+
+   3. If you want to show the parallel-execution behaviour on
+      purpose, delete the Delay after a GripperClose and run it.
+      The arm leaves while the fingers are still moving. Better
+      that a rep sees this on a bench than a customer sees it in
+      a cell.
+
+   NEXT   advanced/01_variables.mxprog — programs that are not
+          hard-coded.
+   --------------------------------------------------------------- */

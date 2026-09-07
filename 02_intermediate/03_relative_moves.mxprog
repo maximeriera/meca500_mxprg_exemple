@@ -1,0 +1,175 @@
+/* ==============================================================
+   03 — Relative moves: approach and retract
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   MoveLinRelTrf, MoveLinRelWrf
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     A pick pattern that works at any pose, unchanged
+   TIME      ~35 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   THE COMMANDS
+
+       MoveLinRelTrf(x, y, z, alpha, beta, gamma)
+       MoveLinRelWrf(x, y, z, alpha, beta, gamma)
+
+   Same six arguments as MoveLin, but they are an OFFSET from
+   where the robot already is, not an absolute destination. Both
+   move in a straight line. The difference is which way the
+   offset points:
+
+     MoveLinRelTrf   relative to the TOOL frame — "back off 40 mm
+                     along the tool axis", wherever the tool
+                     happens to be pointing
+     MoveLinRelWrf   relative to the WORLD frame — "straight up
+                     40 mm", regardless of tool orientation
+
+   WHY THIS IS MORE THAN A CONVENIENCE
+
+   In basic/04 the approach pattern was written in absolute
+   coordinates:
+
+       MovePose(190, 0, 300, 0, 90, 0)     above the part
+       MoveLin(190, 0, 260, 0, 90, 0)      down onto it
+       MoveLin(190, 0, 300, 0, 90, 0)      back up
+
+   Every one of those Z values has to be recomputed if the pick
+   point moves. With a hundred pick points, that is a hundred
+   pairs of numbers that can disagree with each other.
+
+   Written relatively, the pattern becomes:
+
+       MovePose(<the pick point>)
+       MoveLinRelTrf(0, 0, 40, 0, 0, 0)    back off along tool
+       ... approach, grip, retract ...
+
+   Now there is ONE number per pick point, and the approach
+   distance is stated once. Teach a new point and the approach
+   comes along for free.
+
+   TRF OR WRF?
+
+   Use TRF when the motion is about the tool: withdraw along the
+   axis of insertion, lift off the surface you are normal to,
+   back a probe out of a hole. This is the usual answer, and it
+   keeps working when the tool is at an angle.
+
+   Use WRF when the motion is about the world: lift vertically to
+   clear a fixture wall, step sideways along a pallet row. Use it
+   when gravity or cell geometry defines the direction, not the
+   tool.
+
+   These are linear moves, so they obey SetCartLinVel and all the
+   MoveLin caveats: they can be refused near singularities or
+   joint limits, and they hold the arm configuration.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(20)
+SetCartLinVel(60)
+
+MoveJoints(0, 0, 0, 0, 0, 0)
+Delay(1)
+
+
+/* --- The pick pattern, written once ----------------------------
+   Below, the same five-line pattern runs at three different pick
+   points in three different orientations. The pattern itself
+   never changes — only the MovePose line that puts the robot at
+   the point. */
+
+// --- Pick point 1: tool pointing straight down ----------------
+MovePose(190, -60, 260, 0, 90, 0)
+MoveLinRelTrf(0, 0, -40, 0, 0, 0)     // approach along tool axis
+Delay(0.5)                            // (grip here)
+MoveLinRelTrf(0, 0, 40, 0, 0, 0)      // retract along tool axis
+
+Delay(1)
+
+// --- Pick point 2: same pattern, different place --------------
+MovePose(190, 0, 280, 0, 90, 0)
+MoveLinRelTrf(0, 0, -40, 0, 0, 0)
+Delay(0.5)
+MoveLinRelTrf(0, 0, 40, 0, 0, 0)
+
+Delay(1)
+
+// --- Pick point 3: tilted 30 degrees --------------------------
+// This is the one that proves the point. The tool is no longer
+// vertical, and the approach lines are still unchanged — because
+// "along the tool axis" follows the tool. In absolute
+// coordinates this move would need trigonometry.
+MovePose(190, 60, 260, 0, 60, 0)
+MoveLinRelTrf(0, 0, -40, 0, 0, 0)
+Delay(0.5)
+MoveLinRelTrf(0, 0, 40, 0, 0, 0)
+
+Delay(1)
+
+
+/* --- TRF versus WRF, side by side -------------------------------
+   Same tilted pose, same 40 mm, two different directions. */
+
+MovePose(190, 0, 270, 0, 60, 0)
+Delay(0.5)
+
+// Along the tool axis — the tool backs straight out of where it
+// was pointing, on the diagonal.
+MoveLinRelTrf(0, 0, -40, 0, 0, 0)
+Delay(0.5)
+MoveLinRelTrf(0, 0, 40, 0, 0, 0)
+Delay(0.5)
+
+// Straight up in world Z — vertical, regardless of the 30 degree
+// tool tilt. Watch the two moves back to back and the difference
+// is unmistakable.
+MoveLinRelWrf(0, 0, 40, 0, 0, 0)
+Delay(0.5)
+MoveLinRelWrf(0, 0, -40, 0, 0, 0)
+
+
+// --- Home -----------------------------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   THINGS TO TRY
+
+   1. Change every "40" in the pick patterns to "20" with a find
+      and replace, and run again. The approach distance for the
+      entire program just changed, in one edit. Compare that to
+      editing absolute Z values for every point.
+
+   2. The tilted pick is the strongest single demonstration here.
+      Show it, then ask how their current system handles an
+      approach vector that is not vertical.
+
+   NEXT   04_posture_configuration.mxprog — the eight different
+          ways to reach one pose.
+   --------------------------------------------------------------- */

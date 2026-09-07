@@ -1,0 +1,169 @@
+/* ==============================================================
+   02 — TRF: the Tool Reference Frame
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   SetTrf — telling the robot where the tool tip is
+   NEEDS     Robot activated + homed. Runs safely with no tool.
+   WATCH     A pure rotation, before and after defining a tool
+   TIME      ~30 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   THE OTHER HALF OF THE FRAME STORY
+
+   The WRF answers "where is the work?". The TRF answers "where
+   is the tool?".
+
+       SetTrf(x, y, z, alpha, beta, gamma)
+
+   defines the TRF — the Tool Reference Frame — with respect to
+   the FRF, the Flange Reference Frame at the end of the arm.
+
+   By default the TRF sits exactly on the flange. That is
+   correct and useless: nothing does work at the flange. The work
+   happens at the tip of the gripper finger, the point of the
+   needle, the centre of the suction cup — typically 60 to 120 mm
+   further out, and often off-axis.
+
+   Tell the robot where that point is, and two things become
+   true:
+
+   1. Every pose you write refers to the TOOL TIP, not the
+      flange. You program the point that touches the part.
+
+   2. Rotations happen ABOUT THE TIP. This is the one that
+      matters and the one that demonstrates well. Ask the robot
+      to rotate the tool 30 degrees and it pivots around the
+      point of the needle, instead of swinging the needle through
+      an arc as the flange rotates.
+
+   THE TCP
+
+   The origin of the TRF is the TCP — Tool Centre Point. When a
+   customer says "our TCP", this command is what they mean. (Not
+   to be confused with TCP/IP, which is unfortunate but
+   universal.)
+
+   WHERE THE NUMBERS COME FROM
+
+   Three sources, in increasing order of effort:
+     - the tool's own drawing, if it was designed for this
+     - measurement of the built assembly
+     - a touch-off routine, jogging the tip to a known point in
+       several orientations
+
+   For Mecademic's own MEGP 25E gripper the offset is published,
+   so it is a single line and no calibration.
+
+   WHY IT PAYS OFF LATER
+
+   Change the gripper, change one line, and every pose in every
+   program is still correct. Without a TRF, a new tool means
+   reteaching every point. This is the argument that lands with
+   anyone who maintains a cell rather than builds one.
+
+   Like the WRF, the TRF resets to its default when the robot is
+   activated or reactivated.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(15)
+SetCartLinVel(60)
+
+MoveJoints(0, 0, 0, 0, 0, 0)
+Delay(1)
+
+
+/* --- Before: no tool defined -----------------------------------
+   TRF sits on the flange. */
+SetTrf(0, 0, 0, 0, 0, 0)
+
+MovePose(190, 0, 280, 0, 90, 0)
+Delay(1)
+
+// Rotate the tool 40 degrees about its own axis, then back.
+// With no tool defined, the flange face is what pivots. Anything
+// mounted on it sweeps through an arc. Put a finger 100 mm below
+// the flange in your imagination and watch it travel.
+MovePose(190, 0, 280, 0, 90, 40)
+Delay(0.5)
+MovePose(190, 0, 280, 0, 90, -40)
+Delay(0.5)
+MovePose(190, 0, 280, 0, 90, 0)
+
+Delay(1)
+
+
+/* --- After: a 100 mm tool defined ------------------------------
+   Declare a tool sticking 100 mm straight out along the flange's
+   Z axis — roughly a gripper with the part held between the
+   fingertips. No physical tool is required to see the effect. */
+SetTrf(0, 0, 100, 0, 0, 0)
+
+// Move the TIP to the same place the flange was before. The arm
+// visibly pulls back by 100 mm to put the tool tip there, which
+// on its own tells the story: the robot is now positioning the
+// tool, not itself.
+MovePose(190, 0, 280, 0, 90, 0)
+Delay(1)
+
+// The same rotation as before, now about the tool tip. The tip
+// stays put and the ARM swings around it. This is the moment the
+// concept lands for most people — it is much more convincing
+// seen than described.
+MovePose(190, 0, 280, 0, 90, 40)
+Delay(0.5)
+MovePose(190, 0, 280, 0, 90, -40)
+Delay(0.5)
+MovePose(190, 0, 280, 0, 90, 0)
+
+
+// --- Put the tool back ----------------------------------------
+SetTrf(0, 0, 0, 0, 0, 0)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   THINGS TO TRY
+
+   1. Run the two halves back to back with no narration. "Watch
+      what the tip does" is the only line you need.
+
+   2. Change SetTrf(0, 0, 100, ...) to SetTrf(0, 0, 150, ...) and
+      run again. Longer tool, same code, still pivots about the
+      tip. Then ask what changing a tool length costs them today.
+
+   3. If a real gripper is mounted, use its published offset and
+      touch the tip to a fixed point. Rotate in place and show
+      the tip staying on that point through the rotation. This is
+      the single most persuasive thing you can do with a Meca500
+      on a table.
+
+   NEXT   03_relative_moves.mxprog — moving along the tool axis,
+          which is what the TRF really buys you.
+   --------------------------------------------------------------- */

@@ -1,0 +1,157 @@
+/* ==============================================================
+   01 — WRF: the World Reference Frame
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   SetWrf — moving the origin instead of the program
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     The same four lines of code, run in two places
+   TIME      ~30 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   THE PROBLEM IT SOLVES
+
+   Every Cartesian pose you write is measured from somewhere. By
+   default that somewhere is the BRF — the Base Reference Frame,
+   fixed in the robot's own base.
+
+   Which means every coordinate in your program is secretly a
+   statement about where the robot is bolted down. Move the robot
+   20 mm on the bench, or build a second identical cell whose
+   fixture sits a little differently, and every pose in the file
+   is now wrong.
+
+       SetWrf(x, y, z, alpha, beta, gamma)
+
+   defines the WRF — the World Reference Frame — with respect to
+   the BRF. From then on, every MovePose and MoveLin is measured
+   from the WRF instead.
+
+   Put the WRF on the fixture, the pallet, the tray, the machine
+   you are tending. Now your coordinates describe the WORK, not
+   the robot. Write the poses once, relative to the fixture, and
+   commission a new cell by measuring one frame.
+
+   THE PAYOFF, IN THE WORDS A REAL APPLICATION USES
+
+     "We moved the robot and nothing had to be reprogrammed."
+     "We have six identical stations and one program."
+     "The fixture is on a shuttle and we index the frame."
+
+   All three are the same feature.
+
+   BY DEFAULT
+
+   The WRF coincides with the BRF, so if you never call SetWrf,
+   everything is measured from the robot base and nothing is
+   surprising. Note that the WRF resets to that default every
+   time the robot is activated or reactivated — a program that
+   depends on a frame must set the frame.
+
+   THE MENTAL MODEL
+
+   SetWrf does not move the robot. It changes what the numbers
+   MEAN. The line MovePose(50, 0, 200, 0, 90, 0) sends the tool
+   to a different physical place before and after a SetWrf, and
+   that is exactly the point.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(20)
+SetCartLinVel(80)
+
+MoveJoints(0, 0, 0, 0, 0, 0)
+Delay(1)
+
+
+/* --- Station A -------------------------------------------------
+   Put the world origin 150 mm out in X and 200 mm up, roughly
+   in front of the robot. Imagine a fixture bolted there.
+
+   In a real cell these six numbers come from measurement, or
+   from jogging the robot to the fixture's corner and reading the
+   pose off the MecaPortal. */
+SetWrf(150, -60, 200, 0, 0, 0)
+
+// Everything below is written relative to that fixture. Note
+// that these are small, human-sized numbers: "40 mm above the
+// corner", "60 mm along the edge". Nobody has to think about
+// where the robot base is.
+MovePose(0, 0, 80, 0, 90, 0)      // above the fixture corner
+MoveLin(0, 0, 40, 0, 90, 0)       // descend to the part
+Delay(0.5)
+MoveLin(60, 0, 40, 0, 90, 0)      // traverse along the edge
+MoveLin(60, 0, 80, 0, 90, 0)      // lift clear
+
+Delay(1)
+
+
+/* --- Station B -------------------------------------------------
+   The second fixture is 120 mm across from the first and rotated
+   by 30 degrees. One line describes that. */
+SetWrf(150, 60, 200, 0, 0, 30)
+
+// Now the interesting part: the five motion lines below are
+// character-for-character identical to the five above. Copy and
+// paste, nothing edited. They execute at the second fixture, in
+// its own rotated orientation, because the frame moved.
+//
+// This is the demo. Do not explain it first — run it, let them
+// see the robot work two different stations, and then scroll up
+// and show that the code is the same.
+MovePose(0, 0, 80, 0, 90, 0)
+MoveLin(0, 0, 40, 0, 90, 0)
+Delay(0.5)
+MoveLin(60, 0, 40, 0, 90, 0)
+MoveLin(60, 0, 80, 0, 90, 0)
+
+
+// --- Put the world back ---------------------------------------
+// Reset the WRF to the base frame, so the next example starts
+// from a known state. Forgetting this is a classic way to
+// confuse yourself in a shared demo cell.
+SetWrf(0, 0, 0, 0, 0, 0)
+
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   THINGS TO TRY
+
+   1. Change one number in the second SetWrf — say the rotation,
+      from 30 to 60 — and run again. The whole station rotates.
+      Ask how long that change would take on their current
+      system.
+
+   2. Turn on the WRF display in the 3D view panel. Seeing the
+      frame jump between stations makes the abstraction concrete
+      for people who do not read code.
+
+   NEXT   02_tool_reference_frame.mxprog — the other frame, and
+          the one that changes when the gripper does.
+   --------------------------------------------------------------- */

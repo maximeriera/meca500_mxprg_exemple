@@ -1,0 +1,183 @@
+/* ==============================================================
+   04 — Posture configuration: eight ways to reach one pose
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   SetConf, SetAutoConf
+   NEEDS     Robot activated + homed, plenty of clear space
+   WATCH     The tool tip stays put while the arm rearranges
+   TIME      ~40 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   THE THING NOBODY MENTIONS UNTIL IT BITES
+
+   A pose says where the tool tip is and how it is oriented. Six
+   numbers. But a six-jointed arm can usually reach that same
+   pose in EIGHT different ways — elbow up or elbow down,
+   shoulder left or right, wrist flipped or not.
+
+   Same tool tip. Same orientation. Completely different-looking
+   robot.
+
+   Three parameters describe which one:
+
+       SetConf(cs, ce, cw)
+
+     cs   shoulder   -1 or 1
+     ce   elbow      -1 or 1
+     cw   wrist      -1 or 1
+
+   Two options each, three parameters, eight combinations.
+
+   WHY YOU SHOULD CARE
+
+   The eight postures are geometrically equivalent and
+   practically very different:
+
+     - one may collide with a fixture and another may not
+     - one may have room to reorient and another may be against
+       a joint limit
+     - one may be far from a singularity and another right on top
+       of one
+     - and if the robot silently changes posture between two
+       cycles, the arm swings through a large, unexpected motion
+       to get there — the classic "it moved somewhere strange"
+       report
+
+   BY DEFAULT: AUTOMATIC
+
+   Automatic posture selection is on by default. The robot picks
+   the joint set closest to where it currently is, which is
+   almost always the sensible choice and keeps motion small.
+
+   Leave it on for demos and for free-space motion. Turn it off
+   when you need a guarantee.
+
+       SetAutoConf(1)    robot chooses (default)
+       SetAutoConf(0)    freeze the current posture
+       SetConf(cs,ce,cw) demand a specific posture
+                         (this also switches automatic off)
+
+   THE RULE OF THUMB
+
+   In a real cell, pin the configuration with SetConf at the
+   start of the program. It costs one line and it removes an
+   entire category of intermittent, hard-to-reproduce faults —
+   the ones where a cell runs for three weeks and then one cycle
+   takes the long way round.
+
+   MoveLin has a stricter rule: a linear move holds its
+   configuration for the whole path and will not flip elbow or
+   wrist partway. If a MoveLin is refused for no obvious reason,
+   the start and end postures disagreeing is a prime suspect.
+
+   THIS EXAMPLE MOVES A LOT
+
+   Switching posture means large arm motions. Give the robot
+   room and run it slowly the first time.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(15)
+
+MoveJoints(0, 0, 0, 0, 0, 0)
+Delay(1)
+
+
+/* --- Automatic: the default ------------------------------------
+   The robot reaches this pose whichever way is closest to where
+   it already is. Run the file twice from different starting
+   positions and it may well choose differently — which is the
+   behaviour we are about to remove. */
+SetAutoConf(1)
+MovePose(160, 0, 220, 0, 90, 0)
+Delay(2)
+
+
+/* --- The same pose, four demanded postures ---------------------
+   Every MovePose line below is IDENTICAL. Only the SetConf above
+   it changes. The tool tip goes to the same point in space every
+   time, and the arm gets there folded a different way.
+
+   This is the demo. Cover the code, let them watch the arm
+   rearrange itself four times, and then reveal that the motion
+   command never changed. */
+
+SetConf(1, 1, 1)
+MovePose(160, 0, 220, 0, 90, 0)
+Delay(2)
+
+SetConf(1, -1, 1)
+MovePose(160, 0, 220, 0, 90, 0)
+Delay(2)
+
+SetConf(1, 1, -1)
+MovePose(160, 0, 220, 0, 90, 0)
+Delay(2)
+
+SetConf(1, -1, -1)
+MovePose(160, 0, 220, 0, 90, 0)
+Delay(2)
+
+
+/* --- Pinning it for a real program -----------------------------
+   This is the pattern to actually use. Choose the posture once,
+   at the top, and every pose below is reached the same way,
+   every cycle, forever. */
+
+SetConf(1, 1, 1)
+
+MovePose(180, -50, 250, 0, 90, 0)
+MovePose(180, 50, 250, 0, 90, 0)
+MovePose(180, 0, 280, 0, 90, 0)
+
+
+// --- Hand control back and go home ----------------------------
+SetAutoConf(1)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   THINGS TO TRY
+
+   1. The four-posture sequence is one of the best visual demos
+      the robot has. It needs no fixture and no tool, and it
+      explains inverse kinematics without the word being said.
+
+   2. Ask an integrator whether their current robot ever "takes a
+      strange route" between two taught points. If yes, this is
+      usually the reason, and SetConf is the fix.
+
+   3. Point out that the robot checks reachability BEFORE it
+      starts moving. Demanding a posture the pose cannot be
+      reached in produces an error and a stationary robot, not a
+      half-finished move.
+
+   NEXT   05_turn_configuration.mxprog — the same idea for the
+          last joint, and the one that saves cables.
+   --------------------------------------------------------------- */

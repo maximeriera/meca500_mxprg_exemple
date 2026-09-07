@@ -1,0 +1,163 @@
+/* ==============================================================
+   05 — Turn configuration: the last joint
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   SetConfTurn, SetAutoConfTurn, and joint 6
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     Joint 6 reaching the same angle by two routes
+   TIME      ~30 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   JOINT 6 IS DIFFERENT
+
+   The first five joints have mechanical limits. Joint 6 does
+   not — it can spin, and its software limit is plus or minus 100
+   turns.
+
+   That creates an ambiguity the other joints do not have. If you
+   ask for a tool orientation, joint 6 at 10 degrees and joint 6
+   at 370 degrees produce exactly the same orientation. The tool
+   looks identical. The robot has turned a full extra revolution.
+
+   The TURN CONFIGURATION parameter, ct, says which revolution
+   you meant:
+
+       SetConfTurn(ct)      ct an integer from -100 to 100
+
+   It selects the range for joint 6 as
+   -180 + ct*360 < theta6 <= 180 + ct*360. So ct = 0 is the
+   normal range, ct = 1 is one full turn further on, and so on.
+
+   WHY ANYONE CARES: CABLES
+
+   For a bare tool, none of this matters and you should leave it
+   alone. It matters when something is CABLED to the end of the
+   arm — a powered gripper, a camera, an air line, a sensor.
+
+   Cable routing at 5 degrees and at 365 degrees is not the same
+   thing at all. One is slack; the other has a full wrap in it.
+   Do that a few thousand times in one direction and the cable
+   fails. Cable failure at the wrist is one of the most common
+   causes of unplanned downtime on any robot, and it is entirely
+   avoidable.
+
+   The recommended treatment for a cabled tool:
+     1. Restrict joint 6 with SetJointLimits to the range the
+        cable can actually tolerate.
+     2. Specify the turn with SetConfTurn so the robot always
+        arrives at a pose the same way round.
+
+   For a cable-less tool, leave automatic turn selection on. The
+   manual is explicit about this: with no cabling, automatic turn
+   configuration should never be disabled.
+
+   ONE PRACTICAL WARNING
+
+   Before powering down, bring joint 6 back within plus or minus
+   420 degrees. Otherwise the robot may not know which revolution
+   it woke up in.
+
+   BY DEFAULT
+
+       SetAutoConfTurn(1)   robot chooses the nearest (default)
+       SetAutoConfTurn(0)   freeze the current turn
+       SetConfTurn(ct)      demand a specific revolution
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(20)
+
+MoveJoints(0, 0, 0, 0, 0, 0)
+Delay(1)
+
+
+/* --- Seeing the ambiguity directly -----------------------------
+   These two joint sets are the same robot POSTURE. Joint 6 ends
+   up pointing the same way both times. But getting from one to
+   the other is a full revolution of the wrist — which you can
+   watch happen.
+
+   Note that we use MoveJoints here, because joint angles are the
+   only way to state "the same orientation, one turn further on"
+   unambiguously. */
+MoveJoints(0, 0, 0, 0, 0, 30)
+Delay(1.5)
+
+MoveJoints(0, 0, 0, 0, 0, 390)      // 30 + 360: same orientation
+Delay(1.5)
+
+MoveJoints(0, 0, 0, 0, 0, 30)       // and back
+Delay(1.5)
+
+
+/* --- Controlling it from a Cartesian pose ----------------------
+   Now the same idea through MovePose, where you specify an
+   orientation and the robot decides which revolution to use. */
+
+MovePose(190, 0, 280, 0, 90, 0)
+Delay(1)
+
+// Demand the normal range: joint 6 lands between -180 and 180.
+SetConfTurn(0)
+MovePose(190, 0, 280, 0, 90, 90)
+Delay(1.5)
+
+// Demand one turn further on. Identical pose command, identical
+// tool orientation at the end — and the wrist takes a whole
+// extra revolution to get there. Watch joint 6, not the tip.
+SetConfTurn(1)
+MovePose(190, 0, 280, 0, 90, 90)
+Delay(1.5)
+
+// Back to the normal range.
+SetConfTurn(0)
+MovePose(190, 0, 280, 0, 90, 0)
+
+
+// --- Hand control back and go home ----------------------------
+// For a cable-less tool this is the correct state to leave in.
+SetAutoConfTurn(1)
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   THINGS TO TRY
+
+   1. This one only sells to people with cabled end-effectors —
+      but to those people it sells hard. Ask whether they have
+      ever replaced a wrist cable. The answer is usually yes, and
+      usually with feeling.
+
+   2. Run the two SetConfTurn poses back to back. Same command,
+      same final orientation, one takes a full extra turn. Then
+      point out that without SetConfTurn, which one you get is
+      the robot's choice, and it can differ between cycles.
+
+   NEXT   06_blending.mxprog — cycle time you get for free.
+   --------------------------------------------------------------- */

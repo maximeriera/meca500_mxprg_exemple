@@ -1,0 +1,189 @@
+/* ==============================================================
+   06 — Blending: cycle time you get for free
+   --------------------------------------------------------------
+   ROBOT     Meca500 only (R3 or R4)
+   TEACHES   SetBlending
+   NEEDS     Robot activated + homed, no tool mounted
+   WATCH     The same five-point path, stop-and-go then flowing
+   TIME      ~35 s
+   ============================================================== */
+
+/* ---------------------------------------------------------------
+   THE COMMAND
+
+       SetBlending(p)     p from 0 (off) to 100 (default)
+
+   By default it is already on, at 100%. Most people discover
+   blending by turning it OFF and wondering why the robot got
+   slow and jerky.
+
+   WHAT IT DOES
+
+   Without blending, the robot comes to a complete stop at every
+   waypoint before starting the next move. Ten waypoints means
+   ten full decelerations and ten full accelerations, and all of
+   that time is spent going nowhere.
+
+   With blending, the robot rounds the corner: it begins the next
+   move before finishing the current one, cutting the corner
+   smoothly instead of stopping on it.
+
+   The result is a path that flows, finishes measurably sooner,
+   and puts far less shock through the mechanism and the payload.
+
+   THE TRADE-OFF, STATED HONESTLY
+
+   A blended corner DOES NOT PASS THROUGH THE WAYPOINT. It passes
+   near it. That is the entire cost, and it is the first question
+   a good integrator will ask.
+
+   So:
+     - Blend the via points, the corners you only put in to get
+       around something. Nobody cares about the exact position of
+       a mid-air waypoint.
+     - Do not blend a point where the robot does work. Turn
+       blending off, or place a full stop, wherever the tool must
+       actually arrive: the pick, the place, the start of a bead.
+
+   The usual pattern is blending on for the whole program, with
+   the process points naturally isolated because the robot has to
+   stop there anyway to grip, dispense, or wait.
+
+   HOW MUCH IS 100%?
+
+   100% means blending occupies the whole of the acceleration and
+   deceleration phases — the roundest corner available. Lower
+   values cut the corner less and stay closer to the waypoint,
+   which makes a direct precision-versus-speed dial. Values
+   around 20 to 50 are a reasonable middle when a path has to
+   stay reasonably close to its via points.
+
+   Note that blending is reset to its default on every activation,
+   and that using SetCartAcc forces a full stop between moves
+   even when blending is enabled.
+   --------------------------------------------------------------- */
+
+
+/* --- Standard reset: start from a known state -----------------
+   Deactivating loses every NON-persistent setting — tool and
+   world frames, speeds, accelerations, blending, payload, torque
+   limits, posture and turn selection, move mode — so this
+   program starts from firmware defaults no matter what ran
+   before it. Reactivating brings the motors back.
+
+   This does NOT move the arm: a robot that was already homed
+   needs no re-homing. (With an MEGP 25* gripper fitted, the
+   gripper re-homes on reactivation. The robot still does not
+   move — but keep the fingers clear.)
+
+   It does NOT reset persistent settings — joint limits, work
+   zone, tool sphere, collision and calibration config all
+   survive. Run common/cold_start.mxprog for those.
+
+   This block is identical in every example. To remove it
+   everywhere, see the README. */
+DeactivateRobot()
+ActivateRobot()
+Home()
+ResetError()
+ResumeMotion()
+
+
+SetJointVel(40)
+SetCartLinVel(200)
+
+MoveJoints(0, 0, 0, 0, 0, 0)
+MovePose(190, -70, 300, 0, 90, 0)
+Delay(1)
+
+
+/* --- Blending off: stop at every corner ------------------------
+   Run this first. It is the "before" picture, and it is what a
+   naive program does. Count the stops — there are four. */
+SetBlending(0)
+
+MoveLin(190, -70, 250, 0, 90, 0)
+MoveLin(190, 0, 250, 0, 90, 0)
+MoveLin(190, 0, 300, 0, 90, 0)
+MoveLin(190, 70, 300, 0, 90, 0)
+MoveLin(190, 70, 250, 0, 90, 0)
+
+Delay(2)
+
+
+// --- Reset for the second pass --------------------------------
+MovePose(190, -70, 300, 0, 90, 0)
+Delay(1)
+
+
+/* --- Blending on: one continuous motion ------------------------
+   The five motion lines below are identical to the five above.
+   Only SetBlending changed. The path now flows through the
+   corners as a single gesture, and finishes noticeably sooner.
+
+   Time both passes with a phone if you want the number. On a
+   path like this the difference is usually large enough that
+   nobody asks for the stopwatch. */
+SetBlending(100)
+
+MoveLin(190, -70, 250, 0, 90, 0)
+MoveLin(190, 0, 250, 0, 90, 0)
+MoveLin(190, 0, 300, 0, 90, 0)
+MoveLin(190, 70, 300, 0, 90, 0)
+MoveLin(190, 70, 250, 0, 90, 0)
+
+Delay(2)
+
+
+// --- Reset for the third pass ---------------------------------
+MovePose(190, -70, 300, 0, 90, 0)
+Delay(1)
+
+
+/* --- Partial blending: the dial --------------------------------
+   Same path again at 25%. Corners are rounded, but much less —
+   the path stays close to the waypoints while still avoiding
+   the dead stops. This is the setting to reach for when the via
+   points matter somewhat, but not exactly. */
+SetBlending(25)
+
+MoveLin(190, -70, 250, 0, 90, 0)
+MoveLin(190, 0, 250, 0, 90, 0)
+MoveLin(190, 0, 300, 0, 90, 0)
+MoveLin(190, 70, 300, 0, 90, 0)
+MoveLin(190, 70, 250, 0, 90, 0)
+
+
+/* --- The real-world pattern ------------------------------------
+   Blending on for travel, off for the point that matters. */
+SetBlending(100)
+MovePose(190, 40, 290, 0, 90, 0)      // via, blended
+MovePose(190, 0, 280, 0, 90, 0)       // via, blended
+
+SetBlending(0)
+MoveLin(190, 0, 250, 0, 90, 0)        // the actual work point
+Delay(0.5)                            // arrives exactly here
+MoveLin(190, 0, 280, 0, 90, 0)
+
+SetBlending(100)
+
+
+// --- Home -----------------------------------------------------
+MoveJoints(0, 0, 0, 0, 0, 0)
+
+
+/* ---------------------------------------------------------------
+   THINGS TO TRY
+
+   1. Run pass one and pass two back to back and say nothing.
+      This is a rare demo where the improvement is obvious to
+      someone with no robotics background at all.
+
+   2. If they ask about accuracy — and the good ones do — answer
+      directly: the blended path does not pass through the
+      waypoint. Then show the last block, where the work point
+      has blending turned off. Being straight about the trade-off
+      is worth more than the extra second of cycle time.
+
+   NEXT   07_gripper.mxprog — actually picking something up.
+   --------------------------------------------------------------- */
